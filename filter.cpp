@@ -7,6 +7,7 @@ filter.cpp: implement a second-order lowpass filter of variable frequency and Q
 // Copied from MAP code, modified by Joshua Ryan Lam, further streamlined by Joshua Ryan Lam
 
 #include <cmath>
+#include <complex>
 #include "filter.h"
 
 // Constructor
@@ -26,9 +27,9 @@ Filter::Filter(float sampleRate)
 }
 	
 // Set the sample rate, used for all calculations
-void Filter::setSampleRate(float rate)
+void Filter::setSampleRate(float frequency)
 {
-	sampleRate_ = rate;
+	sampleRate_ = frequency;
 	T_ = 1.0/sampleRate_;
 	
 	if(ready_)
@@ -49,6 +50,7 @@ void Filter::setQ(float q)
 	calculateCoefficients(frequency_, q_);
 }
 
+// Set filter type using enumeration
 void Filter::setFilterType(int filterType)
 {
 	filterType_ = filterType;
@@ -135,8 +137,7 @@ void Filter::reset()
 	lastY_[0] = lastY_[1] = 0;
 }
 	
-// Calculate the next sample of output, changing the envelope
-// state as needed
+// Calculate the next sample of output
 float Filter::process(float input)
 {
 	if(!ready_)
@@ -147,12 +148,45 @@ float Filter::process(float input)
 	float out = input * coeffA0_ + lastX_[0] * coeffA1_ + lastX_[1] * coeffA2_
     			- lastY_[0] * coeffB1_ - lastY_[1] * coeffB2_;
 
+	// save previous inputs and outputs for next iteration
     lastX_[1] = lastX_[0];
     lastX_[0] = input;
     lastY_[1] = lastY_[0];
     lastY_[0] = out;
     
     return out;
+}
+
+void Filter::updateFrfGraph(Gui& gui, int bufferId)
+{
+	// calculate FRF from 0 to 20000 Hz
+	// Y(w) / X(w) = sum_n(an(exp(-jwn))) / sum_n(bn(exp(-jwn)))
+	for (int i = 0; i < FRF_GRAPH_N; i++)
+	{
+		// float w = 2*M_PI*powf(20000, float(i)/(FRF_GRAPH_N - 1));
+		float w = powf(1+M_PI,float(i)/(FRF_GRAPH_N - 1))-1;
+		std::complex<float> jw = 1i * w;
+		std::complex<float> jw2 = 2* 1i * w;
+		
+		std::complex<float> expa1 = coeffA1_ * std::exp(jw);
+		std::complex<float> expa2 = coeffA2_ * std::exp(jw2);
+		std::complex<float> expb1 = coeffB1_ * std::exp(jw);
+		std::complex<float> expb2 = coeffB2_ * std::exp(jw2);
+		
+		float sumAMag = abs(std::complex<float>(coeffA0_) + expa1 + expa2);
+		float sumBMag = abs(std::complex<float>(1) + expb1 + expb2);
+		
+		frf_[i] = sumAMag / sumBMag;
+		
+		// convert to decibels
+		if (frf_[i] > 0.001)
+			frf_[i] = 20 * log10(frf_[i]);
+		else
+			frf_[i] = -60;
+		//convert to range [-60, 20] to [0, 1] (0.0125 is dividing by 80)
+		frf_[i] = (frf_[i] + 60) * 0.0125;
+	}
+	gui.sendBuffer(bufferId, frf_);
 }
 	
 // Destructor

@@ -9,6 +9,10 @@ filter.h: header file for defining a second order resonant kow pass filter
 #ifndef FILTER_H
 #define FILTER_H
 
+#include <libraries/Gui/Gui.h>
+
+#define FRF_GRAPH_N 40
+
 //enumerator for filterType
 enum {
 	kLowPass = 0,
@@ -40,15 +44,17 @@ public:
 	void makeHighPass();
 	void makeBandPass();
 	
-	// set multiple parameters at once (Fc, Q, type), -1 to skip setting
+	// set multiple parameters at once (Fc, Q, type)
+	// input -1 to skip setting
 	void setFilterParams(float frequency, float q, int filterType);
 	
 	// Reset previous history of filter
 	void reset();
 	
-	// Calculate the next sample of output, changing the envelope
-	// state as needed
+	// Calculate the next sample of output
 	float process(float input); 
+	
+	void updateFrfGraph(Gui& gui, int bufferId);
 	
 	// Destructor
 	~Filter();
@@ -59,13 +65,19 @@ private:
 
 	// State variables, not accessible to the outside world
 	bool ready_;	// Have the coefficients been calculated?
-	int filterType_;
-	float sampleRate_, T_;
-	float frequency_;
-	float q_;
+	int filterType_; // enumeratred filter type
+	float sampleRate_, T_; // sample rate and sample period
+	float frequency_; // cutoff frequency
+	float q_; // Q factor
+	// Coefficients
 	float coeffA0_, coeffA1_, coeffA2_, invCoeffB0_, coeffB1_, coeffB2_;
+	// previous inputs
 	float lastX_[2];
+	//previous outputs
 	float lastY_[2];
+	
+	// FRF
+	float frf_[FRF_GRAPH_N] = {0};
 };
 
 #endif

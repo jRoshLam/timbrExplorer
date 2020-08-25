@@ -15,24 +15,26 @@ Adsr::Adsr(float sampleRate)
 {
 	setSampleRate(sampleRate);
 
-	// Set some defaults
+	// Set defaults
 	duration_ = 0;
 	attackTime_ = 0.01;
 	decayTime_ = 0.01;
 	sustainlvl_ = 0.5;
 	releaseTime_ = 0.01;
 	
+	// ADSR is in off state to begin with
 	adsrLevel_ = 0.0;
 	currentState_ = kADSRStateOff;
 	
+	// Initialize Debounce counter and conditions
 	debounceCounter_ = 0;
 	debounceInterval_ = int(DEBOUNCE_MS * sampleRate_ / 1000.0); // 20 ms
 }
 
 // Set the sample rate, used for all calculations
-void Adsr::setSampleRate(float rate)
+void Adsr::setSampleRate(float frequency)
 {
-	sampleRate_ = rate;	
+	sampleRate_ = frequency;	
 }
 
 // Set Attack
@@ -62,6 +64,7 @@ void Adsr::setRelease(float releaseTime)
 	invReleaseSamples_ = 1 / (releaseTime_ * sampleRate_);
 }
 
+// Return current state
 int Adsr::getState()
 {
 	return currentState_;
@@ -79,10 +82,26 @@ void Adsr::setDuration(float duration)
 	
 }
 
-//outside of this class, keep another boolean state of on or off
-//if off and button pressed, switch to on, and begin calling this process
-//when this process reaches a state of kADSRStateOff, change the external
-//boolean to off
+//getters
+float Adsr::getAttack()
+{
+	return attackTime_;
+}
+float Adsr::getDecay()
+{
+	return decayTime_;
+}
+float Adsr::getSustain()
+{
+	return sustainlvl_;
+}
+float Adsr::getRelease()
+{
+	return releaseTime_;
+}
+
+// update and return ADSR level. Manage state as necessary
+// input: whether input trigger (ex. button, midi key) is currently pressed
 float Adsr::process(bool noteOn)
 {
 	switch(currentState_)

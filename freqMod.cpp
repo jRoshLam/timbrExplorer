@@ -11,28 +11,37 @@ FreqMod::FreqMod(float sampleRate, float frequency)
 {
 	sampleRate_ = sampleRate;
 	frequency_ = frequency;
-	opAlgorithm_ = 0;
 	
+	// default config is additive synthesis
+	opAlgorithm_ = kFmConfigAdd;
+	
+	// initialize wavetables
 	initWavetables();
 	
+	// initialize operator defaults 
+	// operators are non-copyable (have const references) so they must be
+	// constructed here, which is why we are using a vector of Operators
 	for (unsigned int i = 0; i < NUM_OPERATORS; i++)
 	{
+		opFreqRatios_[i] = 1;
+		opAmplitudes_[i] = 1;
 		opFrequencies_[i] = opFreqRatios_[i]*frequency_;
 		operators_.push_back(Operator(sampleRate_, tableVector_));
-		// operators_[i].setup(sampleRate_, sineWaveTable_);
-		// operators_[i] = Operator(sampleRate_, sineWaveTable_, WAVETABLE_SIZE);
 		operators_[i].setup(kWaveSine, frequency_);
 		operators_[i].setFrequency(opFrequencies_[i]);
 	}
 }
 
+
+// Calculate wavetables
 void FreqMod::initWavetables()
 {
+	//inverse of wavetable size
 	float invWavetableSize = 1.0 / float(WAVETABLE_SIZE+1);
-	// sineWaveTable_.reserve(WAVETABLE_SIZE);
 	for (int i = 0; i < WAVETABLE_SIZE; i++)
 	{
 		sineWaveTable_.push_back(sinf(2*M_PI*i*invWavetableSize));
+		// all wavetables calculated to be between 1 and -1
 		sawWaveTable_.push_back(2*float(WAVETABLE_SIZE - i)/WAVETABLE_SIZE - 1);
 		if (i < WAVETABLE_SIZE / 2)
 		{
@@ -45,38 +54,36 @@ void FreqMod::initWavetables()
 			squareWaveTable_.push_back(-1);
 		}
 		
-		// sineWaveTable_[i] = sin(2*M_PI*i*invWavetableSize);
-		// sineWaveTable_[i] = float(WAVETABLE_SIZE - i)/WAVETABLE_SIZE;
-		// sawWaveTable_[i] = (WAVETABLE_SIZE - i)/WAVETABLE_SIZE;
-		// if (i < WAVETABLE_SIZE / 2)
-		// 	squareWaveTable_[i] = 1;
-		// else
-		// 	squareWaveTable_[i] = 0;
-		
 	}
+	// add wavetables to vector of vectors
 	tableVector_.push_back(sineWaveTable_);
 	tableVector_.push_back(triWaveTable_);
 	tableVector_.push_back(squareWaveTable_);
 	tableVector_.push_back(sawWaveTable_);
-	// rt_printf("sineWaveTable_ size is %d\n", sineWaveTable_.size());
 }
 
-void FreqMod::setSampleRate(float f)
+// Set sample rate of class and its operator objects
+void FreqMod::setSampleRate(float frequency)
 {
-	sampleRate_ = f;
+	sampleRate_ = frequency;
 	for (unsigned int i = 0; i < NUM_OPERATORS; i++)
 		operators_[i].setSampleRate(sampleRate_);
 }
+
+// Reset operator frequencies
 void FreqMod::reset()
 {
 	for (unsigned int i = 0; i < NUM_OPERATORS; i++)
 		operators_[i].reset();
 }
 
+// return a reference to the 0th operator object
 const Operator& FreqMod::getDebugOperator()
 {
 	return operators_[0];
 }
+
+// debug Getters
 int FreqMod::getWaveTableSize()
 {
 	// return WAVETABLE_SIZE;
@@ -101,19 +108,6 @@ void FreqMod::setFrequency(float frequency)
 	}
 }
 
-void FreqMod::setFrequencyRatios(float ratio0, float ratio1, float ratio2, float ratio3)
-{
-	opFreqRatios_[0] = ratio0;
-	opFreqRatios_[1] = ratio1;
-	opFreqRatios_[2] = ratio2;
-	opFreqRatios_[3] = ratio3;
-	for (unsigned int i = 0; i < NUM_OPERATORS; i++)
-	{
-		opFrequencies_[i] = opFreqRatios_[i]*frequency_;
-		operators_[i].setFrequency(opFrequencies_[i]);
-	}
-}
-
 // Set frequency ratios of operators
 void FreqMod::setFrequencyRatios(const std::vector<float>& ratios)
 {
@@ -125,18 +119,7 @@ void FreqMod::setFrequencyRatios(const std::vector<float>& ratios)
 	}
 }
 
-void FreqMod::setAmplitudes(float amp0, float amp1, float amp2, float amp3)
-{
-	opAmplitudes_[0] = amp0;
-	opAmplitudes_[1] = amp1;
-	opAmplitudes_[2] = amp2;
-	opAmplitudes_[3] = amp3;
-	for (unsigned int i = 0; i < NUM_OPERATORS; i++)
-	{
-		operators_[i].setAmplitude(opAmplitudes_[i]);
-	}
-}
-
+// Set amplitudes of operators
 void FreqMod::setAmplitudes(const std::vector<float>& amps)
 {
 	for (unsigned int i = 0; i < NUM_OPERATORS; i++)
@@ -146,6 +129,7 @@ void FreqMod::setAmplitudes(const std::vector<float>& amps)
 	}
 }
 
+// Set waveshapes of operators
 void FreqMod::setWaveshapes(const std::vector<int>& waves)
 {
 	for (unsigned int i = 0; i < NUM_OPERATORS; i++)
@@ -154,6 +138,7 @@ void FreqMod::setWaveshapes(const std::vector<int>& waves)
 	}
 }
 
+// Set amplitudes, ratios and waveshapes all at once.
 void FreqMod::setSpectrum(const std::vector<float>& amps, const std::vector<float>& ratios, const std::vector<int>& waves)
 {
 	for (unsigned int i = 0; i < NUM_OPERATORS; i++)
@@ -162,7 +147,6 @@ void FreqMod::setSpectrum(const std::vector<float>& amps, const std::vector<floa
 		opFrequencies_[i] = opFreqRatios_[i]*frequency_;
 		operators_[i].setParameters(amps[i], opFrequencies_[i], waves[i]);
 	}
-	
 }
 
 // Set operator algorithm based on enumerator (how operators are strung together)
@@ -177,8 +161,8 @@ float FreqMod::process()
 	float out = 0;
 	switch(opAlgorithm_)
 	{
-		// no Modulation, just additive
-		case kFmConfigAM: {
+		// no Modulation, just additive synthesis
+		case kFmConfigAdd: {
 			for (unsigned int i = 0; i < NUM_OPERATORS; i++)
 				out += operators_[i].amplitude()*operators_[i].process(0);
 			out *= 0.25;
