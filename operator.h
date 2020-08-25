@@ -10,58 +10,65 @@
 
 #define WAVETABLE_SIZE 512
 
+// Dummy table for default constructor
 static const std::vector<std::vector<float>> dummyTable;
 
 class Operator {
 public:
-	Operator();													// Default constructor
-	// Operator(float sampleRate, float *tableData, int tableLength); // Constructor with arguments
-	// void setup(float sampleRate, float *tableData, int tableLength); // Set parameters
+	Operator();	// Default constructor
 	Operator(float sampleRate, const std::vector<std::vector<float>>& tableData); // Constructor with arguments
 	void setup(int tableIndex, float frequency); // Set parameters
 	
-	void setSampleRate(float f);
+	// set sample rate
+	void setSampleRate(float frequency);
 	
+	// reset phase
 	void reset();
 	
-	void setAmplitude(float a);	// Set the operator amplitude
-	void setFrequency(float f);	// Set the operator frequency
-	void setTable(int i);		// Set the opeartor wavetable
-	void setParameters(float amplitude, float frequency, int table);
+	void setAmplitude(float amplitude);	// Set the operator amplitude
+	void setFrequency(float frequency);	// Set the operator frequency
+	void setTable(int waveShapeEnum);		// Set the opeartor wavetable
+	void setParameters(float amplitude, float frequency, int waveShapeEnum);
 	
+	// Getters for debugging
 	float amplitude();			// Get the operator amplitude
 	float modAmplitude();		// Get the operator modulator amplitude
 	float frequency();			// Get the operator frequency
-	float tableLength();
-	float phaseIncr();
-	float lengthXinvSampleRate();
-	float debugValue();
+	float tableLength();		// Get the length of current wavetable
+	float phaseIncr();			// Get the current phase increment
+	float lengthXinvSampleRate(); 
+	float debugValue();			// Get a debug wave sample
 	
-	float modulationPhase(float modulation);					// obtain modulation value to add to a carrier phase
+	// obtain modulation value to add to a carrier phase
+	float modulationPhase(float modulation);
 	
-	// float modulatedProcess(Operator modulator);	// process with a modulator operator
+	// Get the next sample and update the phase
+	float process(float modulation);
 	
-	float process(float modulation);			// Get the next sample and update the phase
-	
-	~Operator();				// Destructor
+	~Operator(); // Destructor
 
 private:
 	float sampleRate_;			// Sample rate of the audio
-	// std::array<float, WAVETABLE_SIZE> *table_;	// Wavetable data
+	
+	// Const reference to vector of wavetables (vector of vectors)
+	// Use a const reference so each operator doesn't need to make a copy of the vector
 	const std::vector<std::vector<float>>& table_;
-	// float *table_;
-	int currentTable_;
+
+	// operator parameters
+	int currentTable_;			// Index of current table
 	float tableLength_;			// Length of the wavetable
-	float lengthXinvSampleRate_;
 	float amplitude_;			// Normal amplitude of operator
 	float modAmplitude_;		// Amplitude if operator is modulating
 	float frequency_;			// Frequency of the operator
 	
-	float phase_;				// Phase of the operator
-	float phaseIncr_;
+	// Commonly needed inverted vlues to be used for multiplication instead of division
+	float lengthXinvSampleRate_;// Length / sampleRate
+	float invTwoPi_;			// 1 / (2*pi)
 	
-	unsigned int lastFrameCount_;
-	float lastOutput_;
-	float invTwoPi;
+	// Operator state information
+	float phase_;				// Phase of the operator
+	float phaseIncr_;			// Amount to increment pahse by each frame (determined by frequency)
+	float lastOutput_;			// Operator's output from previous frame
+	
 	
 };

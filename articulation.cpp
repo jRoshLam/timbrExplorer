@@ -10,55 +10,66 @@ Articulation::Articulation(float sampleRate)
 {
 	sampleRate_ = sampleRate;
 	
+	// Set default values (will likely be overwritten elsewhere)
 	frequency_ = 0;
-	
 	articulation_ = MAX_ARTICULATION / 2;
-	allPass_ = 0;
+
+	// All pass setup
+	allPass_ = false;
+	// by default all-pass is middle 10% of articulation range
 	allPassZone_ = 0.05;
-	
 	arThresholdLP_ = int(MAX_ARTICULATION * (0.5 - allPassZone_));
 	arThresholdHP_ = int(MAX_ARTICULATION * (0.5 + allPassZone_));
 	
+	// min and max articulation time in milliseconds
+	minArticTime_ = 5;
+	maxArticTime_ = 1000;
+
+	// Fc initialization
 	baseFc_ = 0;
 	deltaFc_ = 0;
+	// min and max Fc in Hz, based off of human hearing range.
 	minFc_ = 50;
 	maxFc_ = 20000;
 	
-	// articulation time in milliseconds
-	minArticTime_ = 5;
-	maxArticTime_ = 1000;
-	
+	// Initialize filter parameters 
+	filterQ_ = 1.0; // Q-factor fixed at 1.0
+	// these are overwritten by updateArticulation()
 	filterType_ = kLowPass;
-	filterQ_ = 1.0;
 	filterFc_ = minFc_;
 	
+	// Initialize Filter object
 	articuFilter_ = Filter(sampleRate_);
+	
+	updateFcGraph_ = false;
 	
 	initArticulationTable();
 }
 
+// Initialize lookup table matching articulation to baseFc
 void Articulation::initArticulationTable()
 {
-	// float steepest_slope = powf((maxFc_ - minFc_), 1 / (sampleRate_ * 0.005));
-	// float shallowest_slope = (maxFc_ - minFc_) / (sampleRate_ * 0.6);
-	// float slopeDiff = (steepest_slope - shallowest_slope);
 	float articTime = 0;
-	articToBaseFcTable_.reserve(MAX_ARTICULATION);
+	articToBaseFcTable_.reserve(MAX_ARTICULATION); // reserve size for vector
 	for (unsigned int ar = 0; ar < MAX_ARTICULATION; ar++)
 	{
+		// if articulation is in low-pass zone (lower end of range)
 		if (ar <= arThresholdLP_)
 		{
+			// Articulation time is longer the farther it is from the middle of the range, calculated on logarithmic scale
 			articTime = (minArticTime_ + powf(maxArticTime_ - minArticTime_, float(arThresholdLP_ - ar)/float(arThresholdLP_))) * 0.001;
-			// articTime = (maxArticTime_ - powf(maxArticTime_ - minArticTime_, float(ar)/float(arThresholdLP_))) * 0.001;
+			// for low-pass, BaseFc calculated to get from minFc to maxFc
 			articToBaseFcTable_[ar] = powf((maxFc_ - minFc_), 1 / (sampleRate_ * articTime));
 		}
+		// if articulation is in high-pass zone (higher end of range)
 		else if (ar >= arThresholdHP_)
 		{
-			// articTime = (minArticTime_ + powf(maxArticTime_ - minArticTime_, float(ar - arThresholdHP_)/float(MAX_ARTICULATION - arThresholdHP_))) * 0.001;
+			// Articulation time is longer the farther it is from the middle of the range, calculated on logarithmic scale
 			articTime = (minArticTime_ + powf(maxArticTime_ - minArticTime_, float(ar - arThresholdHP_)/float(MAX_ARTICULATION - arThresholdHP_))) * 0.001;
-			// articToBaseFcTable_[ar] = articTime;
+			// for low-pass, BaseFc calculated to get from maxFc to minFc (inverted)
 			articToBaseFcTable_[ar] = 1 / powf((maxFc_ - minFc_), 1 / (sampleRate_ * articTime));
 		}
+		// otherwise, we are in all-pass zone (middle of range). These values can be anything, won't be used.
 		else
 		{
 			articToBaseFcTable_[ar] = 0;
@@ -66,12 +77,14 @@ void Articulation::initArticulationTable()
 	}
 }
 
-void Articulation::setSampleRate(float f)
+// Set sample rate, accordingly changes sampleRate of Filter object
+void Articulation::setSampleRate(float frequency)
 {
-	sampleRate_ = f;
+	sampleRate_ = frequency;
 	articuFilter_.setSampleRate(sampleRate_);
 }
 
+// Set frequency, used to set it to that of current note
 void Articulation::setFrequency(float frequency)
 {
 	frequency_ = frequency;
@@ -115,31 +128,56 @@ float Articulation::getFilterFc()
 	return filterFc_;
 }
 
-// Change how the filter Fc changes
+// Toggle enable for advanced controls
+void Articulation::setAdvMode(bool advMode)
+{
+	advMode_ = advMode;
+	
+	// Set defaults
+	if (!advMode_)
+	{
+		filterQ_ = 1.0;
+	}
+}
+
+// Set advanced controls for articulation, filter Q
+void Articulation::setAdvControls(float q)
+{
+	if (advMode_)
+	{
+		filterQ_ = q;
+	}
+}
+
+// Change how the filter Fc changes according to new articulation
 void Articulation::updateArticulation(int articulation)
 {
+	// if articulation hasn't actualy changed, don't bother running calculations
 	if (articulation_ == articulation)
 		return;
 	
+	// Update articulation
 	articulation_ = articulation;
-	if (articulation_ > arThresholdLP_ && articulation_ < arThresholdHP_)
-		allPass_ = true;
-	else
-		allPass_ = false;
+	updateFcGraph_ = true;
 	
 	// Update slope
 	baseFc_ = articToBaseFcTable_[articulation_];
 	
 	//check articulation_ if low-pass
 	if (articulation_ <= arThresholdLP_)
+	{
 		filterType_ = kLowPass;
-
+		allPass_ = false;
+	}
 	//check articulation_ if high-pass
-	if (articulation_ >= arThresholdHP_)
+	else if (articulation_ >= arThresholdHP_)
+	{
 		filterType_ = kHighPass;
-		
-	// reset();
-	
+		allPass_ = false;
+	}
+	// otherwise we must be in the all-pass zone
+	else
+		allPass_ = true;
 }
 
 // Update Fc and apply filter
@@ -160,9 +198,47 @@ float Articulation::process(float sampleIn)
 	// Update FilterFc
 	deltaFc_ *= baseFc_;
 	filterFc_ = frequency_ + minFc_ + deltaFc_;
-	articuFilter_.setFilterParams(filterFc_, -1, filterType_);
+	articuFilter_.setFilterParams(filterFc_, filterQ_, filterType_);
 	
 	// Apply filter
 	return articuFilter_.process(sampleIn);
-	// return sampleIn;
+}
+
+void Articulation::updateFcGraph(Gui& gui, int bufferId)
+{
+	// float tempArr[3] = {0, 0.5, 0};
+	// gui.sendBuffer(3, tempArr);
+	// only run if the graph eeds to be updated
+	// if (!updateFcGraph_)
+	// 	return;
+	// updateFcGraph_ = false;
+	if (allPass_)
+	{
+		gui.sendBuffer(bufferId, 1);
+		return;
+	}
+		
+	
+	for (int i = 0; i < ARTICULATION_GRAPH_N; i++)
+	{
+		// fcGraph_[i] = float(i) / ARTICULATION_GRAPH_N;
+		// graph Fc change over a full second. Fc = 20000 : y = 1
+		float tt = (float(i) / ARTICULATION_GRAPH_N) * sampleRate_;
+		if (filterType_ == kLowPass)
+		{
+			// divide by 20000 to keep between 0 and 1
+			float fc = pow(baseFc_, tt);
+			if (fc < 20000)
+				fcGraph_[i] = fc * 0.00005;
+			else
+				fcGraph_[i] = 1;
+		}
+		else if (filterType_ == kHighPass)
+			// don't need to divie by 20000 since it's already between 0 and 1 
+			fcGraph_[i] = pow(baseFc_, tt);
+		else
+			fcGraph_[i] = 1;
+	}
+
+	gui.sendBuffer(bufferId, fcGraph_, ARTICULATION_GRAPH_N);
 }

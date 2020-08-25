@@ -4,6 +4,7 @@
 
 #include <Bela.h>
 
+// Enumerator for ADSR states
 enum {
 	kADSRStateOff = 0,
 	kADSRStateAttack,
@@ -18,7 +19,6 @@ enum {
 class Adsr
 {
 public:
-	// bool testVar = false;
 
 	// Constructor
 	Adsr();
@@ -27,7 +27,7 @@ public:
 	Adsr(float sampleRate);
 	
 	// Set the sample rate, used for all calculations
-	void setSampleRate(float rate);
+	void setSampleRate(float frequency);
 	
 	// Set Attack
 	void setAttack(float attackms);
@@ -48,6 +48,12 @@ public:
 	//return the current state of the ADSR
 	int getState();
 	
+	//getters
+	float getAttack();
+	float getDecay();
+	float getSustain();
+	float getRelease();
+	
 	// Get current Envelope Amplitude
 	float process(bool noteOn);
 	
@@ -55,16 +61,18 @@ public:
 
 private:
 	
-	int currentState_;
-	float adsrLevel_;
-	float adsrIncrement_;
-	int debounceCounter_;
-	int debounceInterval_;
+	int currentState_; // current enumerated ADSR state
+	float adsrLevel_; // current output level of ADSR
+	float adsrIncrement_; // Current amount to incremenet level by
+	int debounceCounter_; // frame counter for debounce timing
+	int debounceInterval_; // debounce interval in number of frames
 	
 	float sampleRate_;
+	// ADSR
 	float attackTime_, decayTime_, sustainlvl_, releaseTime_;
+	// inverse variables so we can use multiply instead of division (faster)
 	float invAttackSamples_, invDecaySamples_, invReleaseSamples_;
-	float duration_;
+	float duration_; // determines whether or not we have a fixed duration (0 sustain)
 };
 
 #endif

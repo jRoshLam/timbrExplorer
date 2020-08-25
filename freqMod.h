@@ -9,9 +9,11 @@
 
 #define NUM_OPERATORS 4
 
+
+// Enumeration for Operator configurations
 enum fmConfigs
 {
-	kFmConfigAM = 0,
+	kFmConfigAdd = 0,
 	kFmConfigDoubleStack22,
 	kFmConfigDoubleStack31,
 	kFmConfigDoubleStack33,
@@ -21,6 +23,7 @@ enum fmConfigs
 	kAmConfigOddEven
 };
 
+// Enumeration for waveshapes
 enum waveShapes
 {
 	kWaveSine = 0,
@@ -29,7 +32,7 @@ enum waveShapes
 	kWaveSaw
 };
 
-//
+
 class FreqMod
 {
 public:
@@ -39,13 +42,18 @@ public:
 	// Constructor with sampleRate and Frequency
 	FreqMod(float sampleRate, float frequency);
 	
-	void setSampleRate(float f);
+	// Set sample rate 
+	void setSampleRate(float frequency);
 	
+	// reset operator phases
 	void reset();
 	
+	// calculate wavetable values
 	void initWavetables();
 	
+	// retrieve a reference to an operators for debug purposes
 	const Operator& getDebugOperator();
+	// other getters for debug purposes
 	int getWaveTableSize();
 	float getDebugWaveValue();
 	
@@ -53,11 +61,9 @@ public:
 	void setFrequency(float frequency);
 	
 	// Set frequency ratios of operators
-	void setFrequencyRatios(float ratio0, float ratio1, float ratio2, float ratio3);
 	void setFrequencyRatios(const std::vector<float>& ratios);
 	
 	// Set amplitudes of operators
-	void setAmplitudes(float amp0, float amp1, float amp2, float amp3);
 	void setAmplitudes(const std::vector<float>& amps);
 	
 	// Set wavetable of operators
@@ -74,30 +80,31 @@ public:
 	
 private:
 	// Source Wavetable 
+	// wavetables as a vector of vectors.
+	// First index selects the wavetable, second index indexes wavetable contents
 	std::vector<std::vector<float>> tableVector_;
-	std::vector<float> sineWaveTable_;
-	std::vector<float> triWaveTable_;
-	std::vector<float> squareWaveTable_;
-	std::vector<float> sawWaveTable_;
-	// float sineWaveTable_[WAVETABLE_SIZE];
-	// float squareWaveTable_[WAVETABLE_SIZE];
-	// float sawWaveTable_[WAVETABLE_SIZE];
+	//individual wavetables as vectors
+	std::vector<float> sineWaveTable_; // sine
+	std::vector<float> triWaveTable_; // triangle
+	std::vector<float> squareWaveTable_; // square
+	std::vector<float> sawWaveTable_; //sawtooth
 	
 	// FM Operators
 	std::vector<Operator> operators_;
 	
-	//ratios of FM operator frequencies to the base frequency
-	float opFreqRatios_[NUM_OPERATORS] = {1, 1, 1, 1};
+	// ratios of FM operator frequencies to the base frequency
+	float opFreqRatios_[NUM_OPERATORS];
+	// operator frequencies, product of base frequency and ratios
 	float opFrequencies_[NUM_OPERATORS];
-	
-	float opAmplitudes_[NUM_OPERATORS] = {1, 1, 1, 1};
+	// operator amplitudes
+	float opAmplitudes_[NUM_OPERATORS];
+	// current FM algorithm (how to arrange operators)
+	int opAlgorithm_;
 	
 	// sample rate
 	float sampleRate_;
 	// Base Frequency
 	float frequency_;
-	
-	int opAlgorithm_;
 	
 };
 
