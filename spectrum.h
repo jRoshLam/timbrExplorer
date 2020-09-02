@@ -27,7 +27,7 @@ public:
 	// Toggle enable for advanced controls
 	void setAdvMode(bool advMode);
 	
-	// update FM spectrum
+	// update FM spectrum based on buffer from GUI (advanced mode)
 	void updateAdvSpectrum(float* fmBuffer);
 	
 	// Update FeqMod object based on Spectrum value

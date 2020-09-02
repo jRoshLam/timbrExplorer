@@ -7,7 +7,7 @@
 #include "filter.h"
 
 #define MAX_ARTICULATION 256
-#define ARTICULATION_GRAPH_N 40
+#define ARTICULATION_GRAPH_N 60
 
 class Articulation
 {
@@ -64,8 +64,8 @@ private:
 	
 	// boolean for toggling advanced mode
 	bool advMode_;
-	
-	bool updateFcGraph_;
+
+	// articulation graph y-values
 	float fcGraph_[ARTICULATION_GRAPH_N] = {0};
 	
 	float frequency_; // frequency of current note

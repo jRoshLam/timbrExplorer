@@ -11,7 +11,7 @@ filter.h: header file for defining a second order resonant kow pass filter
 
 #include <libraries/Gui/Gui.h>
 
-#define FRF_GRAPH_N 40
+#define FRF_GRAPH_N 60
 
 //enumerator for filterType
 enum {
@@ -76,7 +76,7 @@ private:
 	//previous outputs
 	float lastY_[2];
 	
-	// FRF
+	// FRF graph y-values
 	float frf_[FRF_GRAPH_N] = {0};
 };
 

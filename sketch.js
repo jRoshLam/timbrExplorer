@@ -36,7 +36,9 @@ let dsrSliders = [];
 let NUM_OPS = 4;
 
 // Class Declarations
+// Space class to manage Trill displays, dimension inputs, and labels
 class Space {
+	// inputs are input textboxes
 	constructor(spIn, brIn, arIn, enIn) {
 		this.x = 0;
 		this.y = 0;
@@ -48,27 +50,27 @@ class Space {
 	}
 	
 	resize(wid, ht) {
+		// width and size of Space
 		this.w = 0.71* wid;
 		this.h = 0.47 * ht;
 		
-		// Trill pos and size
+		// Trill position and size
 		this.trillSize = 0.7 * this.h;
 		this.trillY = 0.55 * this.h;
 		this.trill1X = 0.25 * this.w;
 		this.trill2X = 0.75 * this.w;
 		
-		
-		// this.txtSize = 0.1 * this.h;
+		// label text size
 		this.txtSize = 0.029*this.w;
 		
-		//label positions
+		// axis label positions
 		this.yAxis1 = 0.58 * this.h;
 		this.xAxisLbl1 = 0.25 * this.w;
 		this.xAxisLbl2 = 0.75 * this.w;
 		this.specLblX = this.trill1X - this.trillSize / 2 - 0.05* this.txtSize;
 		this.artiLblX = this.trill2X - this.trillSize / 2 - 0.05* this.txtSize;
 		
-		//status positions
+		// input label positions and sizes
 		this.specDisp = 0.17*this.w;
 		this.brigDisp = 0.42*this.w;
 		this.artiDisp = 0.67*this.w;
@@ -78,8 +80,7 @@ class Space {
 		this.dispY = 0.05*this.h;
 		this.dispLblY = 0.1*this.h;
 		
-		//input positions
-		
+		// input positions and sizes
 		this.specIn.size(this.dispW, this.dispH);
 		this.brigIn.size(this.dispW, this.dispH);
 		this.artiIn.size(this.dispW, this.dispH);
@@ -98,6 +99,8 @@ class Space {
 		// rect(this.x, this.y, this.w, 0.93*this.h);
 		// rect(this.specDisp, this.dispY, 5*this.txtSize, this.txtSize);
 		// display
+		
+		// Draw input labels
 		textSize(this.txtSize);
 		textAlign(RIGHT, CENTER);
 		var colIntens = 127;
@@ -110,15 +113,15 @@ class Space {
 		fill(0, 0, colIntens);
 		text('Envelope ', this.enveDisp, this.dispLblY);
 		
-		// trill labels
+		// trill axis labels
 		textAlign(CENTER, CENTER);
-		// textSize(this.txtSize);
 		textSize(this.txtSize);
 		fill(colIntens, colIntens, 0);
 		text('Brightness', this.trill1X, 0.98*this.h);
 		fill(0, 0, colIntens);
 		text('Envelope', this.trill2X, 0.98*this.h);
 		
+		//sideways text (translate, rotate, draw and then undo movements)
 		textAlign(CENTER, BOTTOM);
 		translate(this.specLblX, this.trillY);
 		rotate(-1.57);
@@ -134,18 +137,18 @@ class Space {
 	}
 }
 
+// Graph class managing frame, graph, data, and axis labels
 class Graph {
-  constructor(x, y, wid, ht, data, color) {
-    this.x = x;
-    this.y = y;
-    this.wid = wid;
-    this.ht = ht;
+  // inputs are x,y position, size, data, graph color, and axis labels
+  constructor(x, y, wid, ht, data, color, xlbl, ylbl) {
+    this.resize(x, y, wid, ht);
     this.data = data;
-    this.y0 = y + ht;
     this.dataType = 0; // how to interpret data
     this.startY = 0;
     this.endY = 0;
     this.color = color;
+    this.xLbl = xlbl;
+    this.yLbl = ylbl;
   }
   
   setData(data) {
@@ -157,55 +160,98 @@ class Graph {
   }
   
   resize(x, y, wid, ht) {
+  	// frame position and size
   	this.x = x;
     this.y = y;
     this.wid = wid;
     this.ht = ht;
-    this.y0 = y + ht;
+    
+    // graph position and size
+    this.gX = this.x + 0.06*this.wid;
+    this.gY = this.y + 0.06*this.ht;
+    this.gW = 0.88 * this.wid;
+    this.gH = 0.88 * this.ht;
+    
+    // y-coordinate of origin (bottom left)
+    this.y0 = this.gY + this.gH;
+    
+    //label text sizes
+    this.xLblSize = 0.04*this.wid;
+    this.yLblSize = 0.04*this.ht;
+    
+    // positions for axis labels
+    this.midX = this.x + 0.5 * this.wid;
+    this.midY = this.y + 0.5 * this.ht;
+    
   }
   
+  // set starting and ending y-coordinates to close the shape
   setEndPoints(start, end) {
   	this.startY = start;
   	this.endY = end;
   }
   
   draw() {
+  	// frame
   	stroke(0);
   	rectMode(CORNER);
     fill(255);
-    rect(this.x, this.y, this.wid, this.ht);
+    rect(this.x, this.y, this.wid, this.ht, 0.02*this.wid);
+    
+    // inner graph box
+    rect(this.gX, this.gY, this.gW, this.gH);
+    
+    // axes labels
+    fill(0);
+    noStroke();
+    textSize(this.xLblSize);
+    // x axis
+    textAlign(CENTER, TOP);
+    text(this.xLbl, this.midX, this.gY + this.gH);
+    // y axis (sideways text)
+    textAlign(CENTER, BOTTOM);
+    translate(this.gX, this.midY);
+    rotate(-1.57);
+    text(this.yLbl, 0, 0);
+    rotate(1.57);
+    translate(-this.gX, -this.midY);
+    stroke(0);
+    
+    // graph
     fill(this.color);
     var dx;
     var dy;
     var deltaX;
+    // create graph using beginShape and closeShape
     beginShape();
-    // Treat data as alternating series of x,y,x,y,x,y...
+    // if type = 1, Treat data as alternating series of x,y,x,y,x,y...
     if (this.dataType == 1) {
     	for (let i = 0; i < this.data.length; i += 2) {
-	      dx = this.wid*this.data[i];
-	      dy = this.ht*this.data[i + 1];
-	      vertex(this.x + dx, this.y0 - dy);
+	      dx = this.gW*this.data[i];
+	      dy = this.gH*this.data[i + 1];
+	      vertex(this.gX + dx, this.y0 - dy);
 	    }
 	// all other graph types have a start and end point
     } else {
 	    // start point
-		dy = this.ht * this.startY;
-		vertex(this.x, this.y0 - dy);
+		dy = this.gH * this.startY;
+		vertex(this.gX, this.y0 - dy);
+		
 	    // if the data length is 1, simply plot a horizontal line
 	    if (this.data.length == 1) {
-    		dy = this.ht*this.data[0];
-    		vertex(this.x, this.y0 - dy);
-    		vertex(this.x + this.wid, this.y0 - dy);
+    		dy = this.gH*this.data[0];
+    		vertex(this.gX, this.y0 - dy);
+    		vertex(this.gX + this.gW, this.y0 - dy);
     	
-	    // treat data as array of y coords evenly spaced in x
+	    // otherwise if type=0, treat data as array of y coords evenly spaced in x
 	    } else if (this.dataType === 0) {
 	    	// otherwise, plot the data with each element as a y coord
 	    	// if the length is 0, then the loop won't be run
 		    for (let i = 0; i < this.data.length; i++) {
 		      deltaX = i / (this.data.length - 1);
-		      dx = this.wid * deltaX;
-		      dy = this.ht*this.data[i];
-		      vertex(this.x + dx, this.y0 - dy);
+		      dx = this.gW * deltaX;
+		      dy = this.gH*this.data[i];
+		      vertex(this.gX + dx, this.y0 - dy);
 		    }
 		// Logarithmic X axis converts linear range [0-22050] and Logarithmic range [10-20000]
 	    } else if (this.dataType == 2) {
@@ -216,24 +262,29 @@ class Graph {
 		      //316-19952
 		      //deltaX = (Math.log10(freq) - 2.5) / 1.8;
 		      if (deltaX >= 0 && deltaX <= 1) {
-			      dx = this.wid * deltaX;
-			      dy = this.ht*this.data[i];
-			      vertex(this.x + dx, this.y0 - dy);
+			      dx = this.gW * deltaX;
+			      dy = this.gH*this.data[i];
+			      vertex(this.gX + dx, this.y0 - dy);
 		      }
 		    }
 	    }
 	    // end point
-		dy = this.ht * this.endY;
-	    vertex(this.x+this.wid, this.y0 - dy);
+		dy = this.gH * this.endY;
+	    vertex(this.gX+this.gW, this.y0 - dy);
     }
+    // close shape
     endShape(CLOSE);
     noStroke();
   }
 }
 
+// block diagram class managing dimension graphs, arrows, and labels
+// does not manage final spectrum graph
 class BlockDiagram {
 	constructor(wid, ht) {
 		this.resize(wid, ht);
+		
+		//can't initialize custom objects within other objects?
 		// this.specGraph = new Graph(this.graphSX, this.graphY, this.graphW, this.graphH, [[0,0]]);
 		// this.brigGraph = new Graph(this.graphBX, this.graphY, this.graphW, this.graphH, [[0,0]]);
 		// this.artiGraph = new Graph(this.graphAX, this.graphY, this.graphW, this.graphH, [[0,0]]);
@@ -247,6 +298,7 @@ class BlockDiagram {
 		this.w = 0.81 * wid;
 		this.h = 0.29 * ht;
 		
+		// graph positions and size
 		this.graphH = 0.26 * ht;
 		this.graphW = 0.19 * wid;
 		this.graphY = 0.485 * ht;
@@ -271,6 +323,14 @@ class BlockDiagram {
 		this.lastTriTipY = 0.46 * ht;
 		this.lastTriBackX = this.graphEX + this.graphW;
 		this.lastTriBaseY = 0.48 * ht;
+		
+		// labels
+		this.lblSize = 0.02 * this.w;
+		this.lblBracketY = this.y + 0.28 * ht;
+		this.lblLineY = this.y + 0.29 * ht;
+		this.lblY = this.y + 0.295 * ht;
+		this.rawLblX = this.graphSX + this.graphW / 2;
+		this.shapeLblX = this.graphAX + this.graphW / 2;
 	}
 	
 	draw() {
@@ -282,8 +342,9 @@ class BlockDiagram {
 		// this.artiGraph.draw();
 		// this.enveGraph.draw();
 		
+		// draw arrows
 		stroke(0);
-		strokeWeight(3);
+		strokeWeight(2);
 		fill(255);
 		// Spectrum to Brightness
 		triangle(this.StBtriX, this.triY + this.triSize, this.StBtriX, this.triY - this.triSize, this.graphBX, this.triY);
@@ -293,17 +354,44 @@ class BlockDiagram {
 		triangle(this.AtEtriX, this.triY + this.triSize, this.AtEtriX, this.triY - this.triSize, this.graphEX, this.triY);
 		// last triangle
 		triangle(this.lastTriX - this.triSize, this.lastTriBaseY, this.lastTriX + this.triSize, this.lastTriBaseY, this.lastTriX, this.lastTriTipY);
+		// tail for envelope-to-final-spectrum arrow
 		noFill();
 		beginShape();
 		vertex(this.lastTriBackX, this.triY);
 		vertex(this.lastTriX, this.triY);
 		vertex(this.lastTriX, this.lastTriBaseY);
 		endShape();
+		
+		// Labels and brackets to group graphs
+		noFill();
+		strokeWeight(2);
+		stroke(127, 0, 0);
+		beginShape();
+		vertex(this.graphSX, this.lblBracketY);
+		vertex(this.graphSX, this.lblLineY);
+		vertex(this.graphSX + this.graphW, this.lblLineY);
+		vertex(this.graphSX + this.graphW, this.lblBracketY);
+		endShape();
+		stroke(0);
+		beginShape();
+		vertex(this.graphBX, this.lblBracketY);
+		vertex(this.graphBX, this.lblLineY);
+		vertex(this.graphEX + this.graphW, this.lblLineY);
+		vertex(this.graphEX + this.graphW, this.lblBracketY);
+		endShape();
 		noStroke();
+		textSize(this.lblSize);
+		textAlign(CENTER, TOP);
+		fill(127, 0, 0);
+		text('Raw Spectrum', this.rawLblX, this.lblY);
+		fill(0);
+		text('Shaping Effects', this.shapeLblX, this.lblY);
+		stroke(0);
 		strokeWeight(1);
 	}
 }
 
+// Class to manage final spectrum and graph title in top right
 class FftDisplay {
 	constructor(wid, ht) {
 		this.resize(wid, ht);
@@ -314,23 +402,47 @@ class FftDisplay {
 		this.w = 0.29 * wid;
 		this.h = 0.47 * ht;
 		
+		// graph position and size
 		this.graphX = 0.715 * wid;
-		this.graphY = 0.01 * ht;
+		this.graphY = 0.1 * ht;
 		this.graphW = 0.28 * wid;
-		this.graphH = 0.45 * ht;
+		this.graphH = 0.36 * ht;
+		
+		// title position and size
+		this.titleY = 0.09 * ht;
+		this.titleSize = 0.029 * wid;
 	}
 	draw() {
 		// rectMode(CORNER);
 		// fill(255);
 		// rect(this.x, this.y, this.w, this.h);
+		
+		// graph title
+		fill(0);
+		noStroke();
+		textAlign(LEFT, BOTTOM);
+		textSize(this.titleSize);
+		text('Final Spectrum', this.graphX, this.titleY);
+		stroke(0);
 	}
 }
 
+// Other controls panel in the bottom left
+// manages preset menu, MIDI info, and advanced controls button
 class OtherControls {
+	// inputs are dropDown menu object, preset button, and advanced controls button
 	constructor(dropDown, presetButton, button) {
 		this.menu = dropDown;
 		this.menu.option(' ');
-		this.menu.option('piano');
+		this.menu.option('Bass');
+		this.menu.option('Piano');
+		this.menu.option('Violin');
+		this.menu.option('Flute');
+		this.menu.option('Clarinet');
+		this.menu.option('Timpani');
+		this.menu.option('Marimba');
+		this.menu.option('Xylophone');
+		this.menu.option('Glockenspiel');
 		
 		this.pButton = presetButton;
 		this.aButton = button;
@@ -341,7 +453,7 @@ class OtherControls {
 		this.w = 0.19 * wid;
 		this.h = 0.53 * ht;
 		
-		// preset menu
+		// preset menu and button
 		this.presetLblSize = 0.04 * this.w;
 		this.presetLblY = this.y + 0.07*this.h;
 		this.menu.position(this.x + 0.2*this.w, this.y + 0.095*this.h);
@@ -349,6 +461,7 @@ class OtherControls {
 		this.pButton.position(this.x + 0.65*this.w, this.y + 0.095*this.h);
 		this.pButton.size(0.2*this.w, 0.05*this.h);
 		
+		// advanced button
 		this.aButtonX = this.x + 0.2*this.w;
 		this.aButtonY = this.y + 0.6*this.h;
 		this.aButton.position(this.aButtonX, this.aButtonY);
@@ -356,11 +469,14 @@ class OtherControls {
 		this.aButtonH = 0.15*this.h;
 		this.aButton.size(this.aButtonW, this.aButtonH);
 		
+		// Midi info
 		this.txtSize = 0.1 * this.w;
 		this.pitchX = this.x + 0.2*this.w;
 		this.pitchY = this.y + 0.3*this.h;
 		this.velY = this.y + 0.45*this.h;
 	}
+	
+	// input is a 2-element array of the note and velocity info from Bela
 	draw(midiInfo) {
 		// rectMode(CORNER);
 		// fill(255);
@@ -368,13 +484,16 @@ class OtherControls {
 		
 		// preset label
 		fill(0);
+		noStroke();
 		textAlign(LEFT);
 		textSize(this.presetLblSize);
 		text('Preset Instruments', this.pitchX, this.presetLblY);
 		
+		
 		//MIDI midiInfo
 		var note;
 		var vel;
+		//check conditions to display no numbers
 		if (midiInfo === undefined){
 			note = "";
 			vel = "";
@@ -390,10 +509,18 @@ class OtherControls {
 		textSize(this.txtSize);
 		text('Note: ' + note, this.pitchX, this.pitchY);
 		text('Velocity: ' + vel, this.pitchX, this.velY);
+		stroke(0);
+		
+		// Add BELA logo
+		image(belaLogo, this.x + 0.5*this.w, this.y + 0.85*this.h, 0.4*this.w, 0.1*this.h);
 	}
 }
 
+// Class to manage advaced controls at bottom of screen
 class AdvControls {
+	// inputs are algorthm dropdown menu, array of frequency ratio input text boxes, array of amplitude input text boxes
+	// array of waveshape dropdown menus, update spectrum button, brightness checkbox, brightness slider, articulation slider
+	// and array of sliders for decay, sustain, and release
 	constructor(algSelectIn, fRatiosIn, ampsIn, shapesIn, specButtonIn, brigButton, brigQSlider, artiQSliderIn, dsrSlidersIn) {
 		// algorithm select setup
 		this.algSelect = algSelectIn;
@@ -404,39 +531,48 @@ class AdvControls {
 		this.algSelect.option('TripleStack1', 4);
 		this.algSelect.option('TripleStack2', 5);
 		this.algSelect.option('FourStack', 6);
+		
 		this.fRatios = fRatiosIn;
 		this.amps = ampsIn;
 		this.shapes = shapesIn;
 		this.specButton = specButtonIn;
+		// setup options for waveshape menus
 		for (let i = 0; i < NUM_OPS; i++) {
 			this.shapes[i].option('Sine', 0);
 			this.shapes[i].option('Triangle', 1);
 			this.shapes[i].option('Square', 2);
 			this.shapes[i].option('Saw', 3);
 		}
+		
 		this.brigButton = brigButton;
 		this.brigQSlider = brigQSlider;
 		this.artiQSlider = artiQSliderIn;
 		this.dsrSliders = dsrSlidersIn;
+		
 		// set advMode to 1 and then toggle it off to hide elements
 		this.advMode = 1;
 		this.toggleAdvMode();
-		this.opGridY = [];
 		
+		// arrays of positions for elements
+		this.opGridY = [];
 		this.algGridX = [];
 		this.algGridY = [];
+		// array of enables for algorithm display
 		this.algEN = [];
+		// vertexes for drawing lines of algorithm display
 		this.algVertices = [];
 		
+		//positions for DSR sliders and labels
 		this.dsrSlideY = [];
 		this.dsrSlideLblY = [];
 	}
 	resize(wid, ht) {
 		this.x = 0;
-		this.y = 0.76 * ht;
+		this.y = 0.8 * ht;
 		this.w = 0.81 * wid;
-		this.h = 0.24 * ht;
+		this.h = 0.2 * ht;
 		
+		// pos/size for colored boxes for control areas
 		this.specX = 0;
 		this.specW = 0.33 * this.w;
 		this.brigX = 0.33 * this.w;
@@ -452,20 +588,22 @@ class AdvControls {
 		this.specButton.size(0.08*this.w, 0.18*this.h);
 		this.algSelect.position(0.02*this.w, this.y + 0.25*this.h);
 		this.algSelect.size(0.08*this.w, 30);
-		// algorithm display oh god here we go
+		// X-coordinates of algorithm display grid
 		for (let i = 0; i < 4; i++)
 			this.algGridX[i] = 0.025*(i+1)*this.w;
 		var yOffset = this.y + 0.40*this.h;
+		// Y-coordinates of algorithm display grid
 		for (let i = 0; i < 3; i++)
 			this.algGridY[i] = yOffset + 0.15*(i+1)*this.h;
 		
-		// Operator Grid
+		// Positions for operator parameter Grid
 		this.gridLblY = this.y + 0.2*this.h;
 		this.opColX = 0.13*this.w;
 		this.fColX = 0.14*this.w;
 		this.ampColX = 0.20*this.w;
 		this.waveColX = 0.26*this.w;
 		
+		// more positions and sizes for operator parameter grid elements
 		yOffset = this.y + 0.35*this.h;
 		for (let i = 0; i < NUM_OPS; i++) {
 			this.opGridY[i] = yOffset + 0.15*i*this.h;
@@ -505,6 +643,8 @@ class AdvControls {
 		// rectMode(CORNER);
 		// fill(255);
 		// rect(this.x, this.y, this.w, this.h);
+		
+		//only show these elements if we are in advanced mode
 		if (this.advMode == 1) {
 			// color coded control areas
 			var colIntens = 64;
@@ -518,8 +658,10 @@ class AdvControls {
 			fill(0, 0, 255, colIntens);
 			rect(this.enveX, this.y, this.enveW, this.h);
 			
-			// algorithm display
-			// algEN
+			// algorithm display is based on a grid of 9 numbers representing operators that can be turned on or off, 
+			// depending on the current algorithm. lines signify modulation relationships. For operators connected by
+			// lines, the higher operator modulates the lower operator
+			// algEN indexes
 			// 7 8
 			// 4 5 6
 			// 0 1 2 3
@@ -529,7 +671,7 @@ class AdvControls {
 			// 2 |-|-|-|
 			//   0 1 2 3
 			var alg = this.algSelect.value();
-			// print(alg);
+			// based on algorithm, set enables for numbers and vertices for modulation lines
 			switch(alg) {
 				// additive
 				case '0':
@@ -567,22 +709,29 @@ class AdvControls {
 					this.algVertices = [0,2,0,1, 0,1,1,1, 1,1,1,0];
 				
 			}
-			//alg lines
+			// algorithm modulation lines
 			stroke(160);
+			// beginSahape(LINES) will only connect pairs of vertices
 			beginShape(LINES);
 			for (let i = 0; i < this.algVertices.length; i+=2)
 				vertex(this.algGridX[this.algVertices[i]], this.algGridY[this.algVertices[i+1]]);
 			endShape();
 			noStroke();
-			//alg ops
+			// algorithm operators
 			fill(0);
 			textAlign(CENTER, CENTER);
 			textSize(0.01*this.w);
 			var en;
+			// you're going to have to trust me that this works and also because it does
+			// did it have to be this complicated? probably not.
 			for (let i = 0; i < 4; i++) {
+				// j limit is i+1 (this is not a full 3x4 grid, j=3 is skipped)
 				for (let j = 0; j < i+1; j++) {
+					// for bottom row, enable index is i
 					if (j === 0) en = i;
+					// for all other rows, enable index is calculated as follows
 					else en = 2*j + i + 1;
+					// check enable array whether or not to show operator number
 					if (j != 3 && this.algEN[en] == 1)
 						text(i+1, this.algGridX[i-j], this.algGridY[2 - j]);
 				}
@@ -616,6 +765,7 @@ class AdvControls {
 			text('Sustain', this.dsrSlideX, this.dsrSlideLblY[1]);
 			text('Release', this.dsrSlideX, this.dsrSlideLblY[2]);
 		}
+		//end of hidden/shown advanced control elements
 		
 		
 		// send advanced mode buffer
@@ -628,17 +778,22 @@ class AdvControls {
 		buffer[3] = this.artiQSlider.value();
 		for (let i = 0; i < 3; i++)
 			buffer[i+4] = this.dsrSliders[i].value();
+		// always send advanced mode buffer
+		// (0th element, advanced mode, will determine if it has any effect)
+		// advanced mode buffer index is 1, as determined by initialization order in render.cpp's setup()
 		Bela.data.sendBuffer(1, 'float', buffer);
 		
-		// send advanced FM Spectrum buffer
+		// always send advanced FM Spectrum buffer
+		// (will only have an effect if 0th element, the update flag, is 1)
 		advFmBuffer[1] = this.algSelect.value();
 		for (let i = 0; i < NUM_OPS; i++) {
 			advFmBuffer[2 + 3*i] = this.fRatios[i].value();
 			advFmBuffer[3 + 3*i] = this.amps[i].value();
 			advFmBuffer[4 + 3*i] = this.shapes[i].value();
 		}
+		// advanced FM buffer index is 2, as determined by initialization order in render.cpp's setup()
 		Bela.data.sendBuffer(2, 'float', advFmBuffer);
-		// after sending FM buffer, reset update flag to 0
+		// after sending FM buffer, always reset update flag to 0
 		advFmBuffer[0] = 0;
 		
 		// update values of FM display
@@ -657,6 +812,7 @@ class AdvControls {
 	
 	// toggle advanced mode on the gui by hiding or showing elements
 	toggleAdvMode() {
+		// if currently in advanced mode, turn off and hide all elements
 		if (this.advMode == 1) {
 			this.advMode = 0;
 			print("toggling off");
@@ -674,6 +830,7 @@ class AdvControls {
 				this.dsrSliders[i].hide();
 			}
 		}
+		// if currently not in advanced mode, turn on and show all elements
 		else if (this.advMode === 0) {
 			this.advMode = 1;
 			print("toggling on");
@@ -702,15 +859,18 @@ var fft = new FftDisplay();
 let other;
 let advControls;
 
+// preload function for Trill library and Bela logo
 function preload() {
 	belaLogo = loadImage('../images/logo_bar14.png');
 	loadScript("/libraries/Trill/Trill.js");
 }
 
+
+// At last the setup function, run once at start of code.
 function setup() {
 	createCanvas(windowWidth, windowHeight);
 	
-	//space
+	// Space object
 	trill1 = new Trill('square');
 	trill2 = new Trill('square');
 	specIn = createInput('0');
@@ -723,23 +883,23 @@ function setup() {
 	enveIn.input(updateTimbre);
 	space = new Space(specIn, brigIn, artiIn, enveIn);
 	
-	//block diagram + FFT
-	specGraph = new Graph(0,0,0,0, [[0,0]], color(255, 0, 0));
-	brigGraph = new Graph(0,0,0,0, [[0,0]], color(255, 255, 0));
-	artiGraph = new Graph(0,0,0,0, [[0,0]], color(0, 255, 0));
-	enveGraph = new Graph(0,0,0,0, [[0,0]], color(0, 0, 255));
-	fftGraph = new Graph(0,0,0,0, [[0,0]],  color(0, 0, 0));
-	specGraph.setDataType(2);
+	// block diagram + FFT objects
+	specGraph = new Graph(0,0,0,0, [[0,0]], color(255, 0, 0), 'Frequency', 'Amplitude');
+	brigGraph = new Graph(0,0,0,0, [[0,0]], color(255, 255, 0), 'Frequency', 'Amplitude');
+	artiGraph = new Graph(0,0,0,0, [[0,0]], color(0, 255, 0), 'Time', 'Frequency');
+	enveGraph = new Graph(0,0,0,0, [[0,0]], color(0, 0, 255), 'Time', 'Amplitude');
+	fftGraph = new Graph(0,0,0,0, [[0,0]],  color(0, 0, 0), 'Frequency', 'Amplitude');
+	// specGraph.setDataType(2);
 	// brigGraph.setDataType(2);
 	enveGraph.setDataType(1);
-	fftGraph.setDataType(2);
+	// fftGraph.setDataType(2);
 	for (let x = 0; x < 4; x++) {
 	    timbreDim[x] = 127;
 	    timbreBuffer[2*x] = 0;
 	    timbreBuffer[2*x+1] = 0;
 	}
 	
-	//other controls
+	// other controls object
 	presetMenu = createSelect();
 	presetButton = createButton('Set');
 	presetButton.mousePressed(sendPreset);
@@ -747,7 +907,7 @@ function setup() {
 	advButton.mousePressed(toggleAdvMode);
 	other = new OtherControls(presetMenu, presetButton, advButton);
 	
-	//advanced controls
+	//advanced controls object
 	//FM controls
 	algSelect = createSelect();
 	for (let i = 0; i < 4; i++)
@@ -778,7 +938,7 @@ function setup() {
 function draw() {
 	background(240);
 	
-	//partition spaces and draw labels
+	// draw objects
 	space.draw();
 	blk.draw();
 	fft.draw();
@@ -792,9 +952,12 @@ function draw() {
 	for (let i = 0; i < 4; i++)
 		if (Bela.data.buffers[0][2*i] == 1)
 			timbreDim[i] = Bela.data.buffers[0][2*i+1];
-			
+	
+	// Always send timbre buffer
+	// (will only have an effect if 0th element, the update flag, is 1)
+	// timbre buffer index is 0, as determined by initialization order in render.cpp's setup()
 	Bela.data.sendBuffer(0, 'float', timbreBuffer);
-	// reset all send flags after sending
+	// always reset all send flags after sending
 	for (let i = 0; i < 4; i++)
 		if (timbreBuffer[2*i] == 1) {
 			timbreDim[i] = timbreBuffer[2*i+1];
@@ -823,8 +986,11 @@ function draw() {
 	draw.outFftGraph = Bela.data.buffers[6];
 	fftGraph.setData(draw.outFftGraph);
 	
+	// special case for articulation graph, if in high pass mode, we want to color above the graph
+	// set start and end points at y=1
 	if (draw.fcGraph[0] > 0.5  && draw.fcGraph.length != 1)
 		artiGraph.setEndPoints(1, 1);
+	// otherwise, color below graph, start and end points at y=0
 	else 
 		artiGraph.setEndPoints(0, 0);
 	
@@ -839,22 +1005,19 @@ function draw() {
 	enveGraph.draw();
 	fftGraph.draw();
 	
-	// Add BELA logo
-	image(belaLogo,width-170, height-70,120,50);
 }
 
 function windowResized() {
 	resizeCanvas(windowWidth, windowHeight);
+	
+	//resize objects
 	space.resize(windowWidth, windowHeight);
 	blk.resize(windowWidth, windowHeight);
 	fft.resize(windowWidth, windowHeight);
 	other.resize(windowWidth, windowHeight);
 	advControls.resize(windowWidth, windowHeight);
 	
-	// Resize component windows
-	// Trill/Space display
-	mainW = width * 0.47;
-	
+	//resize trill objects
 	var trWidth = width * 0.35;
 	trill1.width = space.trillSize;
 	trill1.resize(trill1.width);
@@ -867,6 +1030,7 @@ function windowResized() {
 	trill2.xpos = tr2X;
 	trill2.position = [space.trill2X, space.trillY];
 	
+	// resize graphs
 	specGraph.resize(blk.graphSX, blk.graphY, blk.graphW, blk.graphH);
 	brigGraph.resize(blk.graphBX, blk.graphY, blk.graphW, blk.graphH);
 	artiGraph.resize(blk.graphAX, blk.graphY, blk.graphW, blk.graphH);
@@ -874,7 +1038,9 @@ function windowResized() {
 	fftGraph.resize(fft.graphX, fft.graphY, fft.graphW, fft.graphH);
 }
 
+// function called to update timbre dimensions with input boxes
 function updateTimbre() {
+	// retrieve input box values
 	var num = [];
 	num[0] = Number(specIn.value());
 	num[1] = Number(brigIn.value());
@@ -882,7 +1048,7 @@ function updateTimbre() {
 	num[3] = Number(enveIn.value());
 	for (let i = 0; i < 4; i++) {
 		var send = 1;
-		// convert "" to 0
+		// convert empty input boxes to 0
 		if (num[i] == "") {
 			num[i] = 0;
 		}
@@ -890,40 +1056,71 @@ function updateTimbre() {
 		if (num[i] == timbreDim[i]) {
 			send = 0;
 		}
+		// if input box is not a number, don't send
 		else if (isNaN(num[i])) {
 			send = 0;
 			num[i] = 0;
 		}
 	
+		// fill timbre buffer to be sent
 		timbreBuffer[2*i] = send;
 		timbreBuffer[2*i+1] = num[i]
 	}
 }
 
+// function called to update timbre dimensions whem preset button is pressed
 function sendPreset() {
 	var num = [];
 	var send = 1;
 	switch(presetMenu.value()) {
+		// if preset nemu is on blank option do not update any values
 		case ' ':
 			send = 0;
 			num = [0, 0, 0, 0];
 			break;
-		case 'piano':
-			num = [170, 67, 66, 6];
+		case 'Bass':
+			num = [224, 84, 113, 0];
+			break;
+		case 'Piano':
+			num = [170, 67, 124, 6];
+			break;
+		case 'Violin':
+			num = [161, 123, 108, 253];
+			break;
+		case 'Flute':
+			num = [190, 80, 107, 245];
+			break;
+		case 'Clarinet':
+			num = [126, 90, 111, 206];
+			break;
+		case 'Timpani':
+			num = [36, 123, 143, 20];
+			break;
+		case 'Marimba':
+			num = [26, 124, 113, 0];
+			break;
+		case 'Xylophone':
+			num = [11, 122, 113, 0];
+			break;
+		case 'Glockenspiel':
+			num = [0, 128, 128, 0];
 			break;
 	}
+	// fill timbre buffer to be sent.
 	for (let i = 0; i < 4; i++) {
 		timbreBuffer[2*i] = send;
 		timbreBuffer[2*i+1] = num[i]
 	}
 }
 
+// wrapper to toggle advanced mode, triggered by the advanced controls button
 function toggleAdvMode() {
 	advControls.toggleAdvMode();
 }
 
+// function called to update spectrum, sets update flag of advanced buffer to high
 function sendSpectrum() {
 	advFmBuffer[0] = 1;
-	print(algSelect.value());
+	// print(algSelect.value());
 }
 

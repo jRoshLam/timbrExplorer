@@ -55,6 +55,7 @@ public:
 	
 private:
 	// Filter array
+	// As of right now, only one filter object is used. Should probably revert this from an array.
 	Filter brFilters_[NUMBER_OF_FILTERS];
 
 	// lookup table matching brightness to Fc

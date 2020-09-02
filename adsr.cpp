@@ -112,7 +112,7 @@ float Adsr::process(bool noteOn)
 			if (noteOn) {
 				currentState_ = kADSRStateAttack;
 				adsrIncrement_ = (1.0 - adsrLevel_) / (attackTime_ * sampleRate_);
-				rt_printf("adsr state change, newState: %d || level: %f || incr: %f\n", currentState_, adsrLevel_, adsrIncrement_);
+				// rt_printf("adsr state change, newState: %d || level: %f || incr: %f\n", currentState_, adsrLevel_, adsrIncrement_);
 			}
 			break;
 		}
@@ -123,7 +123,7 @@ float Adsr::process(bool noteOn)
 				adsrLevel_ = 1.0;
 				currentState_ = kADSRStateDecay;
 				adsrIncrement_ = (sustainlvl_ - 1.0) / (decayTime_ * sampleRate_);
-				rt_printf("adsr state change, newState: %d || level: %f || incr: %f\n", currentState_, adsrLevel_, adsrIncrement_);
+				// rt_printf("adsr state change, newState: %d || level: %f || incr: %f\n", currentState_, adsrLevel_, adsrIncrement_);
 			}
 			adsrLevel_ += adsrIncrement_;
 			break;
@@ -141,7 +141,7 @@ float Adsr::process(bool noteOn)
 				}
 				else 
 					currentState_ = kADSRStateSustain;
-				rt_printf("adsr state change, newState: %d || level: %f || incr: %f\n", currentState_, adsrLevel_, adsrIncrement_);
+				// rt_printf("adsr state change, newState: %d || level: %f || incr: %f\n", currentState_, adsrLevel_, adsrIncrement_);
 			}
 			adsrLevel_ += adsrIncrement_;
 			break;
@@ -153,7 +153,7 @@ float Adsr::process(bool noteOn)
 				currentState_ = kADSRStateReleaseDebounce;
 				debounceCounter_ = 0;
 				adsrIncrement_ = (0 - adsrLevel_) / (releaseTime_ * sampleRate_);
-				rt_printf("adsr state change, newState: %d || level: %f || incr: %f\n", currentState_, adsrLevel_, adsrIncrement_);
+				// rt_printf("adsr state change, newState: %d || level: %f || incr: %f\n", currentState_, adsrLevel_, adsrIncrement_);
 			}
 			break;
 		}
@@ -163,12 +163,12 @@ float Adsr::process(bool noteOn)
 			// don't look for note on until done debouncing
 			if (debounceCounter_ > debounceInterval_) {
 				currentState_ = kADSRStateRelease;
-				rt_printf("adsr state change, newState: %d || level: %f || incr: %f\n", currentState_, adsrLevel_, adsrIncrement_);
+				// rt_printf("adsr state change, newState: %d || level: %f || incr: %f\n", currentState_, adsrLevel_, adsrIncrement_);
 			}
 			if (adsrLevel_ <= 0) {
 				adsrLevel_ = 0.0;
 				currentState_ = kADSRStateOff;
-				rt_printf("adsr state change, newState: %d || level: %f || incr: %f\n", currentState_, adsrLevel_, adsrIncrement_);
+				// rt_printf("adsr state change, newState: %d || level: %f || incr: %f\n", currentState_, adsrLevel_, adsrIncrement_);
 			}
 			adsrLevel_ += adsrIncrement_;
 			debounceCounter_++;
@@ -181,11 +181,11 @@ float Adsr::process(bool noteOn)
 			if (adsrLevel_ <= 0) {
 				adsrLevel_ = 0.0;
 				currentState_ = kADSRStateOff;
-				rt_printf("adsr state change, newState: %d || level: %f || incr: %f\n", currentState_, adsrLevel_, adsrIncrement_);
+				// rt_printf("adsr state change, newState: %d || level: %f || incr: %f\n", currentState_, adsrLevel_, adsrIncrement_);
 			}
 			if (noteOn) {
 				currentState_ = kADSRStateAttack;
-				rt_printf("adsr state change, newState: %d || level: %f || incr: %f\n", currentState_, adsrLevel_, adsrIncrement_);
+				// rt_printf("adsr state change, newState: %d || level: %f || incr: %f\n", currentState_, adsrLevel_, adsrIncrement_);
 				adsrIncrement_ = (1.0 - adsrLevel_) / (attackTime_ * sampleRate_);
 			}
 			adsrLevel_ += adsrIncrement_;
@@ -196,7 +196,7 @@ float Adsr::process(bool noteOn)
 			// Transition: look for noteOff, go to Off Debounce state
 			if (!noteOn) {
 				currentState_ = kADSRStateOffDebounce;
-				rt_printf("adsr state change, newState: %d || level: %f || incr: %f\n", currentState_, adsrLevel_, adsrIncrement_);
+				// rt_printf("adsr state change, newState: %d || level: %f || incr: %f\n", currentState_, adsrLevel_, adsrIncrement_);
 				debounceCounter_ = 0;
 			}
 			break;

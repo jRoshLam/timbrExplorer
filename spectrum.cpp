@@ -57,6 +57,8 @@ void Spectrum::setAdvMode(bool advMode)
 {
 	advMode_ = advMode;
 }
+
+// Update Frequency Modulation parameters using buffer from GUI
 void Spectrum::updateAdvSpectrum(float* fmBuffer)
 {
 	// first element is 0 or 1 for whetehre or not to update
@@ -67,13 +69,15 @@ void Spectrum::updateAdvSpectrum(float* fmBuffer)
 	fmAlg_ = fmBuffer[1];
 	fmSynth_.setAlgorithm(fmAlg_);
 	
-	//next elements are fRatio, amplitude, and shape, alternating for each operator
+	// next elements are fRatio, amplitude, and shape, alternating for each operator
 	for (int i = 0; i < NUM_OPERATORS; i++)
 	{
 		fRatios_[i] = fmBuffer[2+3*i];
 		amps_[i] = fmBuffer[3+3*i];
 		opWaves_[i] = fmBuffer[4+3*i];
 	}
+	
+	// update freqMod object
 	fmSynth_.setSpectrum(amps_, fRatios_, opWaves_);
 }
 
@@ -85,11 +89,12 @@ void Spectrum::updateSpectrum(int spectrum)
 		return;
 
 	spectrum_ = spectrum;
+	// by default behavior, the algorithm is always additive synthesis
 	fmAlg_ = kFmConfigAdd;
 	updateFmGui_ = 1;
 		
 	// All harmonics + Noise
-	// TBA
+	// TBA? ;)
 	
 	// All harmonics with inharmonicity factor 200-255
 	if (spectrum_ >= 200)
@@ -215,6 +220,7 @@ float Spectrum::process()
 	return fmSynth_.process();
 }
 
+// send current FM algorithm to GUI
 void Spectrum::sendAlg(Gui& gui, int bufferId)
 {
 	int fmControlBuffer[2] = {updateFmGui_, fmAlg_};
@@ -222,16 +228,19 @@ void Spectrum::sendAlg(Gui& gui, int bufferId)
 	updateFmGui_ = 0;
 }
 
+// send current operator frequency ratios to the GUI
 void Spectrum::sendRatios(Gui& gui, int bufferId)
 {
 	gui.sendBuffer(bufferId, fRatios_);
 }
 
+// send current operator amplitudes to the GUI
 void Spectrum::sendAmps(Gui& gui, int bufferId)
 {
 	gui.sendBuffer(bufferId, amps_);
 }
 
+// send current operator waveshapes to the GUI
 void Spectrum::sendShapes(Gui& gui, int bufferId)
 {
 	gui.sendBuffer(bufferId, opWaves_);

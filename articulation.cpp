@@ -23,7 +23,7 @@ Articulation::Articulation(float sampleRate)
 	
 	// min and max articulation time in milliseconds
 	minArticTime_ = 5;
-	maxArticTime_ = 1000;
+	maxArticTime_ = 600;
 
 	// Fc initialization
 	baseFc_ = 0;
@@ -41,8 +41,6 @@ Articulation::Articulation(float sampleRate)
 	// Initialize Filter object
 	articuFilter_ = Filter(sampleRate_);
 	
-	updateFcGraph_ = false;
-	
 	initArticulationTable();
 }
 
@@ -57,7 +55,8 @@ void Articulation::initArticulationTable()
 		if (ar <= arThresholdLP_)
 		{
 			// Articulation time is longer the farther it is from the middle of the range, calculated on logarithmic scale
-			articTime = (minArticTime_ + powf(maxArticTime_ - minArticTime_, float(arThresholdLP_ - ar)/float(arThresholdLP_))) * 0.001;
+			// articTime = (minArticTime_ + powf(maxArticTime_ - minArticTime_, float(arThresholdLP_ - ar)/float(arThresholdLP_))) * 0.001;
+			articTime = (minArticTime_ + ((maxArticTime_ - minArticTime_) * float(arThresholdLP_ - ar)/float(arThresholdLP_))) * 0.001;
 			// for low-pass, BaseFc calculated to get from minFc to maxFc
 			articToBaseFcTable_[ar] = powf((maxFc_ - minFc_), 1 / (sampleRate_ * articTime));
 		}
@@ -65,7 +64,8 @@ void Articulation::initArticulationTable()
 		else if (ar >= arThresholdHP_)
 		{
 			// Articulation time is longer the farther it is from the middle of the range, calculated on logarithmic scale
-			articTime = (minArticTime_ + powf(maxArticTime_ - minArticTime_, float(ar - arThresholdHP_)/float(MAX_ARTICULATION - arThresholdHP_))) * 0.001;
+			// articTime = (minArticTime_ + powf(maxArticTime_ - minArticTime_, float(ar - arThresholdHP_)/float(MAX_ARTICULATION - arThresholdHP_))) * 0.001;
+			articTime = (minArticTime_ + ((maxArticTime_ - minArticTime_) * float(ar - arThresholdHP_)/float(MAX_ARTICULATION - arThresholdHP_))) * 0.001;
 			// for low-pass, BaseFc calculated to get from maxFc to minFc (inverted)
 			articToBaseFcTable_[ar] = 1 / powf((maxFc_ - minFc_), 1 / (sampleRate_ * articTime));
 		}
@@ -133,7 +133,7 @@ void Articulation::setAdvMode(bool advMode)
 {
 	advMode_ = advMode;
 	
-	// Set defaults
+	// Set default Q value if not in advanced mode
 	if (!advMode_)
 	{
 		filterQ_ = 1.0;
@@ -158,7 +158,6 @@ void Articulation::updateArticulation(int articulation)
 	
 	// Update articulation
 	articulation_ = articulation;
-	updateFcGraph_ = true;
 	
 	// Update slope
 	baseFc_ = articToBaseFcTable_[articulation_];
@@ -204,41 +203,37 @@ float Articulation::process(float sampleIn)
 	return articuFilter_.process(sampleIn);
 }
 
+// calculate Articulation graph and send it to the GUI
 void Articulation::updateFcGraph(Gui& gui, int bufferId)
 {
-	// float tempArr[3] = {0, 0.5, 0};
-	// gui.sendBuffer(3, tempArr);
-	// only run if the graph eeds to be updated
-	// if (!updateFcGraph_)
-	// 	return;
-	// updateFcGraph_ = false;
+	// if we are in allPass mode, graph horizontal line at y=1
 	if (allPass_)
 	{
 		gui.sendBuffer(bufferId, 1);
 		return;
 	}
-		
 	
+	//otherwise, calculate the articulation curve as an array of y-values
 	for (int i = 0; i < ARTICULATION_GRAPH_N; i++)
 	{
-		// fcGraph_[i] = float(i) / ARTICULATION_GRAPH_N;
-		// graph Fc change over a full second. Fc = 20000 : y = 1
-		float tt = (float(i) / ARTICULATION_GRAPH_N) * sampleRate_;
+		// graph Fc change over the maximum artiulation time
+		// in order to work with the base factor, the time must be in units of audio frames
+		float tt = ((float(i) / ARTICULATION_GRAPH_N) * maxArticTime_ * 0.001) * sampleRate_;
 		if (filterType_ == kLowPass)
 		{
-			// divide by 20000 to keep between 0 and 1
 			float fc = pow(baseFc_, tt);
 			if (fc < 20000)
+				// divide by 20000 to keep between 0 and 1
 				fcGraph_[i] = fc * 0.00005;
 			else
+				// if Fc >= 20000 set y = 1
 				fcGraph_[i] = 1;
 		}
 		else if (filterType_ == kHighPass)
-			// don't need to divie by 20000 since it's already between 0 and 1 
+			// don't need to divide by 20000 since it's already between 0 and 1 
 			fcGraph_[i] = pow(baseFc_, tt);
-		else
-			fcGraph_[i] = 1;
 	}
 
+	// send calculated graph buffer to the gui.
 	gui.sendBuffer(bufferId, fcGraph_, ARTICULATION_GRAPH_N);
 }

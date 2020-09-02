@@ -128,16 +128,16 @@ private:
 	Articulation articulation_;
 	Envelope envelope_;
 	
-	// polyphony
-	std::vector<float> frequencies_; // note frequency
-	std::vector<float> qFactors_; // brightness q factor
-	std::vector<float> velocities_; // note's midi velocity (affects brightness resonance)
-	std::vector<bool> midiNoteOns_;
-	std::vector<bool> noteOns_;
-	std::vector<Spectrum> spectrums_;
-	std::vector<Brightness> brightnesses_;
-	std::vector<Articulation> articulations_;
-	std::vector<Envelope> envelopes_;
+	// polyphony ==DOES NOT WORK==
+	// std::vector<float> frequencies_; // note frequency
+	// std::vector<float> qFactors_; // brightness q factor
+	// std::vector<float> velocities_; // note's midi velocity (affects brightness resonance)
+	// std::vector<bool> midiNoteOns_;
+	// std::vector<bool> noteOns_;
+	// std::vector<Spectrum> spectrums_;
+	// std::vector<Brightness> brightnesses_;
+	// std::vector<Articulation> articulations_;
+	// std::vector<Envelope> envelopes_;
 	
 	// boolean for toggling advanced mode
 	bool advMode_;
@@ -151,32 +151,34 @@ private:
 	bool midiNoteOn_; // whether a MIDI key is depressed
 	
 
-	// table to convert MIDI numbers to frequencies
+	// table to convert MIDI numbers to frequencies and Q-values
 	float midiToFreqTable_[NUM_MIDI_NOTES] = {0};
 	float velocityToQTable_[NUM_MIDI_NOTES] = {0};
 	
-	ne10_fft_cpx_float32_t* outFftNeInput_ = nullptr;
-    ne10_fft_cpx_float32_t* outFftNeOutput_ = nullptr;
-    ne10_fft_cfg_float32_t outFftcfg_;
-    std::vector<float> outFftInputBuffer_;
-	std::vector<float> outFftOutputBuffer_;
-	std::vector<float> fftWindowBuffer_;
-	int outFftWritePtr_;
-	int outFftNeWritePtr_;
-	int outFftSampleCounter_;
-	bool outFftReady_;
+	// FFT variables for final spectrum FFT
+	ne10_fft_cpx_float32_t* outFftNeInput_ = nullptr; // input buffer for FFT
+    ne10_fft_cpx_float32_t* outFftNeOutput_ = nullptr; // output buffer for FFT
+    ne10_fft_cfg_float32_t outFftcfg_; // size for the FFT
+    std::vector<float> outFftInputBuffer_; // circular buffer of sample values
+	std::vector<float> outFftOutputBuffer_; // buffer of output magnitudes
+	std::vector<float> fftWindowBuffer_; // windowing function for both raw and final fft
+	int outFftWritePtr_; // write pointer for circular buffer
+	int outFftNeWritePtr_; // technically a read pointer to read from circular buffer to ne10 input buffer
+	int outFftSampleCounter_; // count samples for hop size
+	bool outFftReady_; // boolean of whether FFT is ready to be calculated
 	
-	Spectrum fftSpectrum_;
-	float fftSpectrumFreq_;
-	ne10_fft_cpx_float32_t* specFftNeInput_ = nullptr;
-    ne10_fft_cpx_float32_t* specFftNeOutput_ = nullptr;
-    ne10_fft_cfg_float32_t specFftcfg_;
-    std::vector<float> specFftInputBuffer_;
-	std::vector<float> specFftOutputBuffer_;
-	int specFftWritePtr_;
-	int specFftNeWritePtr_;
-	int specFftSampleCounter_;
-	bool specFftReady_;
+	// FFT variables for raw spectrum FFT
+	Spectrum fftSpectrum_; // special Spectrum object for calculating samples for the FFT
+	float fftSpectrumFreq_; // fixed frequency for FFT Spectrum object
+	ne10_fft_cpx_float32_t* specFftNeInput_ = nullptr; // input buffer for FFT
+    ne10_fft_cpx_float32_t* specFftNeOutput_ = nullptr; // output buffer for FFT
+    ne10_fft_cfg_float32_t specFftcfg_; // size for the FFT
+    std::vector<float> specFftInputBuffer_; // circular buffer of sample values
+	std::vector<float> specFftOutputBuffer_; // buffer of output magnitudes
+	int specFftWritePtr_; // write pointer for circular buffer
+	int specFftNeWritePtr_; // technically a read pointer to read from circular buffer to ne10 input buffer
+	int specFftSampleCounter_; // count samples for hop size
+	bool specFftReady_; // boolean of whether FFT is ready to be calculated
 	
 	//dev tools
 	int frameCount_; // frame counter for square wave

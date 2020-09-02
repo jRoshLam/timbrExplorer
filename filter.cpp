@@ -157,35 +157,49 @@ float Filter::process(float input)
     return out;
 }
 
+// calculate Frequency Response Function and send to GUI
 void Filter::updateFrfGraph(Gui& gui, int bufferId)
 {
 	// calculate FRF from 0 to 20000 Hz
 	// Y(w) / X(w) = sum_n(an(exp(-jwn))) / sum_n(bn(exp(-jwn)))
 	for (int i = 0; i < FRF_GRAPH_N; i++)
 	{
-		// float w = 2*M_PI*powf(20000, float(i)/(FRF_GRAPH_N - 1));
-		float w = powf(1+M_PI,float(i)/(FRF_GRAPH_N - 1))-1;
+		
+		// linear scale between 0 and 2pi
+		float w = M_PI * float(i)/(FRF_GRAPH_N - 1);
+		// exponential scale between 0 and 2pi
+		// float w = powf(1+M_PI,float(i)/(FRF_GRAPH_N - 1))-1;
+		
+		// complex variables for jw and 2jw
 		std::complex<float> jw = 1i * w;
 		std::complex<float> jw2 = 2* 1i * w;
 		
+		// variables for complex exponentials (std::exp adapts to imaginary input)
 		std::complex<float> expa1 = coeffA1_ * std::exp(jw);
 		std::complex<float> expa2 = coeffA2_ * std::exp(jw2);
 		std::complex<float> expb1 = coeffB1_ * std::exp(jw);
 		std::complex<float> expb2 = coeffB2_ * std::exp(jw2);
 		
+		// magnitude of sum of exponentials for numerator and denomerator
 		float sumAMag = abs(std::complex<float>(coeffA0_) + expa1 + expa2);
+		// all coefficients have already been normalized by B0, so here it is 1.
 		float sumBMag = abs(std::complex<float>(1) + expb1 + expb2);
 		
+		// calculate FRF magnitude
 		frf_[i] = sumAMag / sumBMag;
 		
 		// convert to decibels
 		if (frf_[i] > 0.001)
 			frf_[i] = 20 * log10(frf_[i]);
+		// set threshold for minimum decibel values (avoid log(0))
 		else
 			frf_[i] = -60;
+
 		//convert to range [-60, 20] to [0, 1] (0.0125 is dividing by 80)
 		frf_[i] = (frf_[i] + 60) * 0.0125;
 	}
+	
+	//send to GUI
 	gui.sendBuffer(bufferId, frf_);
 }
 	

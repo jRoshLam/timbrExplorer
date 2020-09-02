@@ -1,10 +1,15 @@
 /***** note.cpp *****/
+//==NOTE==
+//==failed polyphony prototype included for future reference==
+// raw and final spectrum FFT code can and probably should be collapsed into arrays for more compact code
+// ran out of time
 #include "note.h"
 
 // Constructor
 Note::Note() : Note(44100.0, 440.0) {}
 
 // Constructor specifying a sample rate
+// all vectors initialized  here to set starting size
 Note::Note(float sampleRate, float frequency) :
 spectrum_(sampleRate, frequency),
 outFftInputBuffer_(FFT_BUFFER_N),
@@ -26,7 +31,7 @@ specFftOutputBuffer_(FFT_OUT_N)
 	articulation_ = Articulation(sampleRate_);
 	envelope_ = Envelope(sampleRate_);
 	
-	//polyphony
+	// polyphony ==DOES NOT WORK==
 	// for (int i = 0; i < NUM_VOICES; i++)
 	// {
 	// 	frequencies_.push_back(frequency);
@@ -61,10 +66,12 @@ specFftOutputBuffer_(FFT_OUT_N)
 	specFftNeOutput_ = (ne10_fft_cpx_float32_t*) NE10_MALLOC (FFT_BUFFER_N * sizeof (ne10_fft_cpx_float32_t));
 	specFftcfg_ = ne10_fft_alloc_c2c_float32_neon (FFT_BUFFER_N);
 	
-	//debug variables for square wave timing
+	// debug variables for square wave timing
 	frameCount_ = 0;
 	framePeriod_ = int(sampleRate / frequency_);
 }
+
+// Destructor - clear NE10 pointers allocated in setup
 Note::~Note()
 {
 	NE10_FREE(outFftNeInput_);
@@ -86,6 +93,7 @@ void Note::setSampleRate(float sampleRate)
 	articulation_.setSampleRate(sampleRate_);
 	envelope_.setSampleRate(sampleRate_);
 	
+	// Polyphony ==DOES NOT WORK==
 	// for (int i = 0; i < NUM_VOICES; i++)
 	// {
 	// 	spectrums_[i].setSampleRate(sampleRate_);
@@ -147,24 +155,28 @@ void Note::setSpectrum(int spectrum)
 	spectrum_.updateSpectrum(spectrum);
 	fftSpectrum_.updateSpectrum(spectrum);
 	
-	// for (int i = 0; i < NUM_VOICES; i++)
+	
+	// Polyphony ==DOES NOT WORK==// for (int i = 0; i < NUM_VOICES; i++)
 	// 	spectrums_[i].updateSpectrum(spectrum);
 }
 void Note::setBrightness(int brightness)
 {
 	brightness_.updateBrightness(brightness);
+	// Polyphony ==DOES NOT WORK==
 	// for (int i = 0; i < NUM_VOICES; i++)
 	// 	brightnesses_[i].updateBrightness(brightness);
 }
 void Note::setArticulation(int articulation)
 {
 	articulation_.updateArticulation(articulation);
+	// Polyphony ==DOES NOT WORK==
 	// for (int i = 0; i < NUM_VOICES; i++)
 	// 	articulations_[i].updateArticulation(articulation);
 }
 void Note::setEnvelope(int envelope)
 {
 	envelope_.updateEnvelope(envelope);
+	// Polyphony ==DOES NOT WORK==
 	// for (int i = 0; i < NUM_VOICES; i++)
 	// 	envelopes_[i].updateEnvelope(envelope);
 }
@@ -186,6 +198,7 @@ void Note::setAdvMode(float advMode)
 	envelope_.setAdvMode(advMode_);
 	fftSpectrum_.setAdvMode(advMode_);
 	
+	// Polyphony ==DOES NOT WORK==
 	// for (int i = 0; i < NUM_VOICES; i++)
 	// {
 	// 	spectrums_[i].setAdvMode(advMode_);
@@ -205,6 +218,7 @@ void Note::setAdvControls(float* controlData)
 	articulation_.setAdvControls(controlData[kACIArQ]);
 	envelope_.setAdvControls(controlData[kACIDecay], controlData[kACISustain], controlData[kACIRelease]);
 	
+	// Polyphony ==DOES NOT WORK==
 	// for (int i = 0; i < NUM_VOICES; i++)
 	// {
 	// 	brightnesses_[i].setAdvControls(controlData[kACIBrMidiLink], controlData[kACIBrQ]);
@@ -222,6 +236,7 @@ void Note::updateAdvSpectrum(float* fmBuffer)
 	spectrum_.updateAdvSpectrum(fmBuffer);
 	fftSpectrum_.updateAdvSpectrum(fmBuffer);
 	
+	// Polyphony ==DOES NOT WORK==
 	// for (int i = 0; i < NUM_VOICES; i++)
 	// 	spectrums_[i].updateAdvSpectrum(fmBuffer);
 }
@@ -237,7 +252,7 @@ void Note::setMidiIn(float frequency, float qFactor, int indx)
 	brightness_.setMidiIn(frequency_, qFactor_);
 	articulation_.setFrequency(frequency_);
 	
-	// polyphony
+	// Polyphony ==DOES NOT WORK==
 	// frequencies_[indx] = frequency;
 	// qFactors_[indx] = qFactor;
 	// spectrums_[indx].setFrequency(frequency);
@@ -259,7 +274,7 @@ float Note::process(Gui& gui, bool noteOn)
 		// note onset (e.g. key press), or it might hold a note off (key release).
 		// The latter is signified by a velocity of 0.
 		if(message.getType() == kmmNoteOn) {
-			message.prettyPrint();
+			// message.prettyPrint();
 			int noteNumber = message.getDataByte(0);
 			int velocity = message.getDataByte(1);
 			float noteFrequency = midiToFreqTable_[noteNumber];
@@ -269,15 +284,17 @@ float Note::process(Gui& gui, bool noteOn)
 			if (velocity == 0 && noteFrequency == frequency_)
 			{
 				midiNoteOn_ = false;
+				// Tell GUI to stop displaying midi information (note is off)
 				gui.sendBuffer(kBtGMidi, 0);
 			}
 			else if (!noteOn_)
 			{
 				// last input is meant for polyphony (not used here)
 				setMidiIn(noteFrequency, qFactor, 0);
+				midiNoteOn_ = true;
+				// Send MIDI information to GUI
 				int midiBuffer[2] = {noteNumber, velocity};
 				gui.sendBuffer(kBtGMidi, midiBuffer);
-				midiNoteOn_ = true;
 			}
 		}
 		else if(message.getType() == kmmNoteOff) {
@@ -288,6 +305,7 @@ float Note::process(Gui& gui, bool noteOn)
 			if (noteFrequency == frequency_)
 			{
 				midiNoteOn_ = false;
+				// Tell GUI to stop displaying midi information (note is off)
 				gui.sendBuffer(kBtGMidi, 0);
 			}
 		}
@@ -333,18 +351,22 @@ float Note::process(Gui& gui, bool noteOn)
 	
 	// add output to fft buffer
 	outFftInputBuffer_[outFftWritePtr_] = out;
+	// if write pointer has reached end of buffer, reset to start.
 	if (++outFftWritePtr_ >= FFT_BUFFER_N)
 		outFftWritePtr_ = 0;
+	// if a full hop has been passed, reset counter and indicate an fft is ready
 	if (++outFftSampleCounter_ >= FFT_HOP_SIZE)
 	{
 		outFftSampleCounter_ = 0;
 		outFftReady_ = true;
 	}
 	
-	//add fftSpectrum output to fft buffer
+	// run fftSpectrum's process and add its output to fft buffer
 	specFftInputBuffer_[specFftWritePtr_] = fftSpectrum_.process();
+	// if write pointer has reached end of buffer, reset to start.
 	if (++specFftWritePtr_ >= FFT_BUFFER_N)
 		specFftWritePtr_ = 0;
+	// if a full hop has been passed, reset counter and indicate an fft is ready
 	if (++specFftSampleCounter_ >= FFT_HOP_SIZE)
 	{
 		specFftSampleCounter_ = 0;
@@ -353,6 +375,7 @@ float Note::process(Gui& gui, bool noteOn)
 	return out;
 }
 
+// Polyphony ==DOES NOT WORK==
 // // Run full signal chain of note, triggered by MIDI
 // float Note::process(Gui& gui, bool noteOn)
 // {
@@ -476,23 +499,31 @@ float Note::process(Gui& gui, bool noteOn)
 // 	return out;
 // }
 
+// check if either the raw or final fft are ready to calculate
 bool Note::checkFftReady()
 {
 	return (outFftReady_ && specFftReady_);
 }
 
+// calculate fft's as necessary and send them to the GUI
 void Note::outputFft(Gui& gui)
 {
+	// Final Spectrum FFT
 	if (outFftReady_)
 	{
+		// reset ready flag
 		outFftReady_ = false;
+		// move write pointer to start of the circular buffer
 		outFftNeWritePtr_ = (outFftWritePtr_ + 1) % FFT_BUFFER_N;
+		
 		// Copy data from circular buffer to NE10 buffer
 		for(int n = 0; n < FFT_BUFFER_N; n++)
 		{
+			// data is fully real, no imaginary component
 			outFftNeInput_[n].r = (ne10_float32_t) outFftInputBuffer_[outFftNeWritePtr_] * fftWindowBuffer_[n];
 			outFftNeInput_[n].i = 0;
 	
+			// increment pointer index, moving to start as necessary
 			outFftNeWritePtr_++;
 			if(outFftNeWritePtr_ >= FFT_BUFFER_N)
 				outFftNeWritePtr_ = 0;
@@ -503,6 +534,7 @@ void Note::outputFft(Gui& gui)
 		
 		// normalizing factor for fft
 		float normFactor = 4.0 / float(FFT_BUFFER_N);
+		
 		// Copy FFT amplitude to buffer to send to GUI
 		for(int n = 0; n < FFT_OUT_N; n++)
 		{
@@ -513,6 +545,7 @@ void Note::outputFft(Gui& gui)
 			// then convert to decibels
 			if (outFftOutputBuffer_[n] > 0.001)
 				outFftOutputBuffer_[n] = 20 * log10(outFftOutputBuffer_[n]);
+			// set minimum decibel value (avoid log(0))
 			else
 				outFftOutputBuffer_[n] = -60;
 			//convert to range [-60, 20] to [0, 1] (0.0125 is dividing by 80)
@@ -521,16 +554,21 @@ void Note::outputFft(Gui& gui)
 		// send to gui
 		gui.sendBuffer(kBtGOutFft, outFftOutputBuffer_);
 	}
+	// Raw Spectrum FFT
 	if (specFftReady_)
 	{
+		// reset ready flag
 		specFftReady_ = false;
+		// move write pointer to start of the circular buffer
 		specFftNeWritePtr_ = (specFftWritePtr_ + 1) % FFT_BUFFER_N;
 		// Copy data from circular buffer to NE10 buffer
 		for(int n = 0; n < FFT_BUFFER_N; n++)
 		{
+			// data is fully real, no imaginary component
 			specFftNeInput_[n].r = (ne10_float32_t) specFftInputBuffer_[specFftNeWritePtr_] * fftWindowBuffer_[n];
 			specFftNeInput_[n].i = 0;
 	
+			// increment pointer index, moving to start as necessary
 			specFftNeWritePtr_++;
 			if(specFftNeWritePtr_ >= FFT_BUFFER_N)
 				specFftNeWritePtr_ = 0;
@@ -551,6 +589,7 @@ void Note::outputFft(Gui& gui)
 			//then convert to decibels
 			if (specFftOutputBuffer_[n] > 0.001)
 				specFftOutputBuffer_[n] = 20 * log10(specFftOutputBuffer_[n]);
+			// set minimum decibel value (avoid log(0))
 			else
 				specFftOutputBuffer_[n] = -60;
 			//convert to range [-60, 20] to [0, 1] (0.0125 is dividing by 80)
@@ -562,6 +601,7 @@ void Note::outputFft(Gui& gui)
 	}
 }
 
+// calculate brightness and articulation graphs and send to the GUI
 void Note::updateGraphs(Gui& gui)
 {
 	brightness_.updateFrfGraph(gui, kBtGBrightFrf);
