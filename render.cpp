@@ -48,32 +48,19 @@ AuxiliaryTask gFFTTask;
 AuxiliaryTask gGraphTask;
 // fft callback to be made into an auxiliary task
 void process_fft_background(void*);
+// graph calculation callback to be made into an auxiliary task
 void process_graphs_background(void*);
 
 // Timbre ==========================================================
 // Note object
 // Initialized as global object with default constructor
 Note gDevNote;
-// Timbre parameters and initial values
-int timbreBuffer[8] = {0};
-int timbreDim[4] = {0};
-int gSpectrum = MAX_SPECTRUM / 2 - 1;
-int gBrightness = MAX_BRIGHTNESS / 2 - 1;
-int gArticulation = MAX_ARTICULATION / 2 - 1;
-int gEnvelope = MAX_ENVELOPE / 2 - 1;
-
-// // Debug Spectrum Object
-// Spectrum gDevSpecDens;
-// AM
-// float gDevFmRatios[NUM_OPERATORS] = {1, 3, 5, 7};
-// float gDevFmAmps[NUM_OPERATORS] = {.9, .8, .78, .76};
-// int gDevFmConfig = kFmConfigAM;
-// FM
-// float gDevFmRatios[NUM_OPERATORS] = {1, 3, 1, 2};
-// float gDevFmAmps[NUM_OPERATORS] = {0, 0, .99, 0};
-// int gDevFmConfig = kFmConfigDoubleStack31;
-// Debug variable for metronome notes 
-// unsigned int gFrameCount = 0;
+// Array for storing current timbre values
+// {spectrum, brightness, articulation, envelope}
+int gTimbreDim[4] = {0};
+// Buffer to send to GUI to update dimension values
+// {spFlag, spectrum, brFlag, brightness, arFlag, articulation, enFlag, envelope}
+int gTimbreBuffer[8] = {0};
 
 /*
  * Function to be run on an auxiliary task that reads data from the Trill sensor.
@@ -105,15 +92,16 @@ void loop(void*)
 	}
 }
 
+// wrapper function to feed to Bela_createAuxiliaryTask
 void process_fft_background(void*)
 {
 	gDevNote.outputFft(gui);
-	// rt_printf("background process called\n");
 }
+
+// wrapper function to feed to Bela_createAuxiliaryTask
 void process_graphs_background(void*)
 {
 	gDevNote.updateGraphs(gui);
-	// rt_printf("background process called\n");
 }
 
 
@@ -153,18 +141,14 @@ bool setup(BelaContext *context, void *userData)
 	if (!gDevNote.initMidi())
 		return false;
 	// Initial Timbre values
-	timbreDim[0] = MAX_SPECTRUM / 2 - 1;
-	timbreDim[1] = MAX_BRIGHTNESS / 2 - 1;
-	timbreDim[2] = MAX_ARTICULATION / 2 - 1;
-	timbreDim[3] = MAX_ENVELOPE / 2 - 1;
-	gDevNote.setSpectrum(timbreDim[0]);
-	gDevNote.setEnvelope(timbreDim[1]);
-	gDevNote.setArticulation(timbreDim[2]);
-	gDevNote.setBrightness(timbreDim[3]);
-	// gDevNote.setSpectrum(gSpectrum);
-	// gDevNote.setEnvelope(gEnvelope);
-	// gDevNote.setArticulation(gArticulation);
-	// gDevNote.setBrightness(gBrightness);
+	gTimbreDim[0] = MAX_SPECTRUM / 2 - 1;
+	gTimbreDim[1] = MAX_BRIGHTNESS / 2 - 1;
+	gTimbreDim[2] = MAX_ARTICULATION / 2 - 1;
+	gTimbreDim[3] = MAX_ENVELOPE / 2 - 1;
+	gDevNote.setSpectrum(gTimbreDim[0]);
+	gDevNote.setEnvelope(gTimbreDim[1]);
+	gDevNote.setArticulation(gTimbreDim[2]);
+	gDevNote.setBrightness(gTimbreDim[3]);
 	
 	
 	// GUI setup =============================================================
@@ -182,53 +166,32 @@ bool setup(BelaContext *context, void *userData)
 	// FFT Setup
 	gFFTTask = Bela_createAuxiliaryTask(&process_fft_background, 90, "fft-calculation");
 	gGraphTask = Bela_createAuxiliaryTask(&process_graphs_background, 80, "graph-calculation");
-
-	// Debug setup============================================================
-	// //debug spectrum object setup
-	// gDevSpecDens.updateSpectrum(20);
-	// gDevSpecDens.setFrequencyRatios(gDevFmRatios);
-	// gDevSpecDens.setAmplitudes(gDevFmAmps);
-	// gDevSpecDens.setAlgorithm(gDevFmConfig);
-	
-	// // Set up the slider GUI (requires html resource)
-	// controller.setup(&gui, "Timbre Controller");	
-	// // Arguments: name, default, minimum, maximum, increment
-	// controller.addSlider("Spectrum", MAX_SPECTRUM/2, 0, MAX_SPECTRUM, 1);
-	// controller.addSlider("Brightness", MAX_BRIGHTNESS/2, 0, MAX_BRIGHTNESS, 1);
-	// controller.addSlider("Articulation", MAX_ARTICULATION/2, 0, MAX_ARTICULATION, 1);
-	// controller.addSlider("Envelope", MAX_ENVELOPE/2, 0, MAX_ENVELOPE, 1);
 	
 	return true;
 }
 
 void render(BelaContext *context, void *userData)
 {
+	// Update Timbre =============================================================
 	// frame count for sending data to GUI
 	static unsigned int frameCount = 0;
 	
-	// DEBUG GUI for setting timbre parameters with sliders
-	// spectrum = int(controller.getSliderValue(0));
-	// brightness = int(controller.getSliderValue(1));
-	// articulation = int(controller.getSliderValue(2));
-	// envelope = int(controller.getSliderValue(3));
-	// gDevNote.setSpectrum(spectrum);
-	// gDevNote.setEnvelope(envelope);
-	// gDevNote.setArticulation(articulation);
-	// gDevNote.setBrightness(brightness);
-	
-	//set timbre parameters using the GUI (unless)
+	// set timbre parameters using the GUI
 	DataBuffer& buffer = gui.getDataBuffer(kGtBTimbreParams);
 	float* data = buffer.getAsFloat();
+	// loop through update buffer and only update if the update flag is high
 	for (int i = 0; i < 4; i++)
 	{
+		// check update flag
 		if (data[2*i] == 1) {
-			timbreDim[i] = int(data[2*i+1]);
+			gTimbreDim[i] = int(data[2*i+1]);
+			// set corresponding dimension depending on i
 			switch(i) 
 			{
-				case 0: gDevNote.setSpectrum(timbreDim[0]); break;
-				case 1: gDevNote.setBrightness(timbreDim[1]); break;
-				case 2: gDevNote.setArticulation(timbreDim[2]); break;
-				case 3: gDevNote.setEnvelope(timbreDim[3]); break;
+				case 0: gDevNote.setSpectrum(gTimbreDim[0]); break;
+				case 1: gDevNote.setBrightness(gTimbreDim[1]); break;
+				case 2: gDevNote.setArticulation(gTimbreDim[2]); break;
+				case 3: gDevNote.setEnvelope(gTimbreDim[3]); break;
 			}
 		}
 	}
@@ -245,22 +208,18 @@ void render(BelaContext *context, void *userData)
 		gCurrentSpecPosition[1] = gSpecTouchPosition[1];
 		
 		//filter positions and map them to corresponding parameter range
-		timbreDim[0] = int(map(specFilt.process(gSpecTouchPosition[1]), 0, 1, 0, MAX_SPECTRUM-1));
-		timbreDim[1] = int(map(brightFilt.process(gSpecTouchPosition[0]), 0, 1, 0, MAX_BRIGHTNESS-1));
-		
-		gDevNote.setSpectrum(timbreDim[0]);
-		gDevNote.setBrightness(timbreDim[1]);
-		
-		// //filter positions and map them to corresponding parameter range
-		// gSpectrum = int(map(specFilt.process(gSpecTouchPosition[1]), 0, 1, 0, MAX_SPECTRUM-1));
-		// gBrightness = int(map(brightFilt.process(gSpecTouchPosition[0]), 0, 1, 0, MAX_BRIGHTNESS-1));
-		
-		// gDevNote.setSpectrum(gSpectrum);
-		// gDevNote.setBrightness(gBrightness);
-		timbreBuffer[0] = 1;
-		timbreBuffer[1] = timbreDim[0];
-		timbreBuffer[2] = 1;
-		timbreBuffer[3] = timbreDim[1];
+		gTimbreDim[0] = int(map(specFilt.process(gSpecTouchPosition[1]), 0, 1, 0, MAX_SPECTRUM-1));
+		gTimbreDim[1] = int(map(brightFilt.process(gSpecTouchPosition[0]), 0, 1, 0, MAX_BRIGHTNESS-1));
+
+		gDevNote.setSpectrum(gTimbreDim[0]);
+		gDevNote.setBrightness(gTimbreDim[1]);
+
+		// update send buffer for spectrum and brightness
+		// set update flags to 1 to tell gui to update
+		gTimbreBuffer[0] = 1;
+		gTimbreBuffer[1] = gTimbreDim[0];
+		gTimbreBuffer[2] = 1;
+		gTimbreBuffer[3] = gTimbreDim[1];
 	}
 	// Only update Timbre if filtered touch size is above threshold
 	if (gDynCurrentTouch > gTouchThreshold)
@@ -270,32 +229,30 @@ void render(BelaContext *context, void *userData)
 		gCurrentDynPosition[1] = gDynTouchPosition[1];
 		
 		//filter positions and map them to corresponding parameter range
-		timbreDim[2] = int(map(articFilt.process(gDynTouchPosition[1]), 0, 1, 0, MAX_ARTICULATION-1));
-		timbreDim[3] = int(map(envFilt.process(gDynTouchPosition[0]), 0, 1, 0, MAX_ENVELOPE-1));
+		gTimbreDim[2] = int(map(articFilt.process(gDynTouchPosition[1]), 0, 1, 0, MAX_ARTICULATION-1));
+		gTimbreDim[3] = int(map(envFilt.process(gDynTouchPosition[0]), 0, 1, 0, MAX_ENVELOPE-1));
 
-		gDevNote.setArticulation(timbreDim[2]);
-		gDevNote.setEnvelope(timbreDim[3]);
-		
-		// //filter positions and map them to corresponding parameter range
-		// gArticulation = int(map(articFilt.process(gDynTouchPosition[1]), 0, 1, 0, MAX_ARTICULATION-1));
-		// gEnvelope = int(map(envFilt.process(gDynTouchPosition[0]), 0, 1, 0, MAX_ENVELOPE-1));
+		gDevNote.setArticulation(gTimbreDim[2]);
+		gDevNote.setEnvelope(gTimbreDim[3]);
 
-		// gDevNote.setArticulation(gArticulation);
-		// gDevNote.setEnvelope(gEnvelope);
-		timbreBuffer[4] = 1;
-		timbreBuffer[5] = timbreDim[2];
-		timbreBuffer[6] = 1;
-		timbreBuffer[7] = timbreDim[3];
+		// update send buffer for articulation and envelope
+		// set update flags to 1 to tell gui to update
+		gTimbreBuffer[4] = 1;
+		gTimbreBuffer[5] = gTimbreDim[2];
+		gTimbreBuffer[6] = 1;
+		gTimbreBuffer[7] = gTimbreDim[3];
 	}
 	
-	// advanced controls
+	// Advanced Controls =============================================================
+	// retrieve advanced buffer and convert to float data
 	DataBuffer& advBuffer = gui.getDataBuffer(kGtBAdvControls);
 	float* advData = advBuffer.getAsFloat();
 	
+	// update advanced mode and controls for the note object
 	gDevNote.setAdvMode(advData[kACIAdvMode]);
 	gDevNote.setAdvControls(advData);
 	
-	// advanced FM spectrum buffer and control
+	// advanced FM spectrum buffer and control - retrieve, convert, update
 	DataBuffer& advFmBuffer = gui.getDataBuffer(kGtBAdvSpectrum);
 	float* advFmData = advFmBuffer.getAsFloat();
 	gDevNote.updateAdvSpectrum(advFmData);
@@ -310,40 +267,33 @@ void render(BelaContext *context, void *userData)
 		// gDevNote.printTimbreParameters();
 	}
 	
+	// Audio Block Loop ==========================================================
 	float out = 0;
 	for (unsigned int n = 0; n < context->audioFrames; n++)
 	{
-		// Send positions to GUI at fixed intervals
+		// Send buffers to GUI at fixed intervals
 		if(frameCount >= gGuiPeriod*context->audioSampleRate)
 		{
-			gui.sendBuffer(kBtGTimbreParams, timbreBuffer);
+			//send timbre paramters
+			gui.sendBuffer(kBtGTimbreParams, gTimbreBuffer);
+			//after sending timbre buffer always reset update flags to 0
 			for (int i = 0; i < 4; i++)
-				timbreBuffer[2*i] = 0;
+				gTimbreBuffer[2*i] = 0;
+			// send assorted envelope and spectrum info to the GUI
 			gDevNote.sendToGui(gui);
+			// schedule task to calculate brightness FRF and articulation graph and then send them to the GUI
 			Bela_scheduleAuxiliaryTask(gGraphTask);
+			// schedule tasks to calculate raw and final spectrum FFTs and send them to the GUI
 			Bela_scheduleAuxiliaryTask(gFFTTask);
 
 			frameCount = 0;
 		}
 		frameCount ++;
 		
-		// if (gFrameCount < context->audioSampleRate)
-		// 	out = gDevNote.process(true);
-		// else
-		// 	out = gDevNote.process(false);
-		// // reset gFrameCount
-		// if (++gFrameCount >= 2 * context->audioSampleRate)
-		// 	gFrameCount = 0;
-		// out = gDevSpecDens.process();
-		
 		// call note process
 		out = gDevNote.process(gui, true);
 		// log output to oscilloscope
 		gScope.log(out);
-		
-		//check note fft
-		// if (gDevNote.checkFftReady())
-		// 	Bela_scheduleAuxiliaryTask(gFFTTask);
 		
 		// Write output to all audio out channels
 		for (unsigned int i = 0; i < context->audioOutChannels; i++)

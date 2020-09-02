@@ -56,8 +56,6 @@ public:
 	
 	// Get current Envelope Amplitude
 	float process(bool noteOn);
-	
-	
 
 private:
 	

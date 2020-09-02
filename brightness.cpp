@@ -146,11 +146,12 @@ void Brightness::setAdvMode(bool advMode)
 // Update midiLink boolean and Q factor, as necessary
 void Brightness::setAdvControls(float midiLink, float qFactor)
 {
+	// if we're not in advanced mode, exit function
 	if (!advMode_)
 		return;
-	// if the midi link is true, update it and exit function
-	// if we have just turned midiLink back on, update filter
+	// if the input midi link is true, update as necessary and then exit function
 	if (midiLink == 1) {
+		// if we have just turned midiLink back on, update filter
 		if(!midiLink_) {
 			midiLink_ = true;
 			filterQ_ = velocityQ_;
@@ -173,7 +174,8 @@ void Brightness::setAdvControls(float midiLink, float qFactor)
 		return;
 	}
 	bool updateFilter = false;
-	// if we're here, input midiLink = 0, and if midi link has just turned off, we need to update Fc
+	// if we're here, input midiLink = 0 and
+	// if midi link has just turned off (midiLink_ still true), we need to update Fc
 	if (midiLink_) {
 		updateFilter = true;
 		midiLink_ = false;
@@ -191,6 +193,7 @@ void Brightness::setAdvControls(float midiLink, float qFactor)
 		updateFilter = true;
 		filterQ_ = qFactor;
 	}
+	// if we are not in all pass mode and either the Fc or Q changed, update filter
 	if (updateFilter && !allPass_)
 		for (unsigned int n = 0; n < NUMBER_OF_FILTERS; n++)
 			brFilters_[n].setFilterParams(filterFc_, filterQ_, filterType_);
@@ -206,13 +209,19 @@ void Brightness::updateBrightness(int brightness)
 	brightness_ = brightness;
 
 	float targetFc;
-	if (midiLink_) targetFc = frequency_ + brightToFcTable_[brightness_];
-	else targetFc = brightToFcTable_[brightness_];
+	// if midiLink_ is true, the fundamental frequency_ is added to the Fc
+	// (brightness is relative to note frequency, Marozeau & deChevigne)
+	if (midiLink_)
+		targetFc = frequency_ + brightToFcTable_[brightness_];
+	// otherwise, simply use the lookup table value
+	else
+		targetFc = brightToFcTable_[brightness_];
+	
 	// add transition zone for High-Pass where cutoff frequency starts at 0
 	// this smoothes out the sound when making the transition
 	if(brightness_ >= brThresholdHP_ && brightness_ < brThresholdHP_+10)
 		filterFc_ = 0.1 * (brightness_ - brThresholdHP_) * targetFc;
-	// otherwise, brightness zone should be relative to note frequency (Marozeau)
+	// if not in transition zone, no need to make further changes
 	else
 		filterFc_ = targetFc;
 	
@@ -252,12 +261,13 @@ float Brightness::process(float sampleIn)
 	return sampleIn;
 }
 
-// update FRF graph
+// update FRF graph and send it to the GUI
 void Brightness::updateFrfGraph(Gui& gui, int bufferId)
 {
-	//if all-pass, send 0.75 (equivalent amplitude of 1 in our converted decibel scale)
+	// if all-pass, graph y=0.75 (equivalent amplitude of 1 in our converted decibel scale)
 	if (allPass_)
 		gui.sendBuffer(bufferId, 0.75);
+	// otherwise, calculate FRF graph and send it.
 	else
 		brFilters_[0].updateFrfGraph(gui, bufferId);
 }

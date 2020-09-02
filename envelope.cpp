@@ -136,17 +136,21 @@ void Envelope::setAdvMode(bool advMode)
 //set advanced parameters of the ADSR: decay, sustain, and release
 void Envelope::setAdvControls(float decay, float sustain, float release)
 {
+	// If not in advanced mode, exit function
 	if (!advMode_)
 		return;
 	
-	// update both envelope and graph
+	// update both ADSR object and graph buffer
+	// Update decay
 	envAdsr_.setDecay(decay);
 	adsrGraph_[4] = envAdsr_.getAttack() + decay;
 	
+	// Update sustain
 	envAdsr_.setSustain(sustain);
 	adsrGraph_[5] = sustain;
 	adsrGraph_[7] = sustain;
 	
+	// Update release
 	envAdsr_.setRelease(release);
 	adsrGraph_[6] = 1 - release;
 	
@@ -165,7 +169,8 @@ void Envelope::updateEnvelope(int envelope)
 	envAdsr_.setAttack(envToAttackTable_[envelope_]);
 	adsrGraph_[2] = envToAttackTable_[envelope_]; // 1,0
 	
-	// default (non-advanced behavior)
+	// default (non-advanced) behavior for decay, sustain, and release
+	// Update both ADSR object and graph buffer
 	if (!advMode_)
 	{
 		// retrieve decay time from lookup table
@@ -209,6 +214,7 @@ float Envelope::process(bool noteOn)
 	return amplitude;
 }
 
+// send ADSR graph buffer to the GUI
 void Envelope::sendToGui(Gui& gui, int bufferId)
 {
 	gui.sendBuffer(bufferId, adsrGraph_);
